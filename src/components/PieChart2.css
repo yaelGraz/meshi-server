@@ -1,0 +1,30 @@
+body{
+text-align: center;
+}
+.recharts-wrapper{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin:0 auto;
+    position:relative;
+}
+.recharts-wrapper>svg{
+    position: absolute;
+    top:50%;
+    left:50%;
+    transform: translate(-50%,-50%);
+    
+}
+/* הוסף את הכללים הבאים לקובץ CSS שלך או על העיצוב שלך */
+ .recharts-sector {
+    stroke: white ;/* צבע המסגרת */
+    stroke-width:1; /* עובי המסגרת */
+  }
+
+  .recharts-pie-sector {
+    stroke: none !important; /* Remove stroke (border) */
+  }
+  
+  
+  

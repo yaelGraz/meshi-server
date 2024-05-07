@@ -1,0 +1,12 @@
+#form{
+    text-align: center;
+    margin: 6%;
+    direction: rtl;
+}
+.lain{
+padding: 2%;
+}
+#submit{
+    background-color:rgb(93 205 93);
+    border:none ;
+}
