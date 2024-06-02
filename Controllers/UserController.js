@@ -31,7 +31,7 @@ const UserController={
     },
     add:async(req,res)=>{
        try{
-        console.log("name,userName,password:",req.body)
+        // console.log("name,userName,password:",req.body)
           const {name,userName,password,isAdmin}=req.body;
           const newUser = new UserModel({ name, userName,password ,isAdmin});
     

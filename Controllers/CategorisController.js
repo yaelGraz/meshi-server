@@ -12,14 +12,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const CategoriesController = {
-    getList: async (req, res) => {
-        try {
-            const categories = await CategoriesModel.find({});
-            res.send({ categories });
-        } catch (e) {
-            res.status(400).json({ message: e.message });
-        }
-    },
+  fetchCategories: async () => {
+    try {
+      const categories = await CategoriesModel.find({});
+      return categories;
+    } catch (e) {
+      throw new Error(`Error fetching categories: ${e.message}`);
+    }
+  },
+
+  getList: async (req, res) => {
+    try {
+      const categories = await CategoriesController.fetchCategories();
+      res.send({ categories });
+    } catch (e) {
+      res.status(400).json({ message: e.message });
+    }
+  },
 
     getCategoryByName: async (categoryName) => {
       try {
@@ -34,21 +43,22 @@ const CategoriesController = {
   
     getSubcategoryByName: async (categoryName, subcategoryName) => {
       try {
-        // Fetch the category first
-        const category = await CategoriesModel.findOne({ name: categoryName });
+        // Fetch the category first 
+        console.log("categoryName in  getSubcategoryByName",categoryName) 
+        console.log("subcategoryName in  getSubcategoryByName",subcategoryName) 
+        const category = await CategoriesModel.findOne({ name: categoryName })
         if (!category) {
           throw new Error(`Category "${categoryName}" not found`);
         }
- 
-        // Function to recursively search for a subcategory by name
+      
         const findSubcategory = (subcategories, name) => {
           if (!Array.isArray(subcategories)) {   
             return null;
           }
-    
+console.log("subcategories",subcategories)
           for (const sub of subcategories) {   
             if (sub.name === subcategoryName) {
-              console.log("sub._id",sub._id)
+console.log("subcategoryName in findSubcategory",subcategoryName)
               return sub._id;
             }
             if (sub.subcategories && sub.subcategories.length > 0) {
@@ -63,7 +73,6 @@ const CategoriesController = {
     
         // Start searching for the subcategory from the category's subcategories array
         const subcategoryId = findSubcategory(category.subCategories, subcategoryName);
-        
         return subcategoryId;
       } catch (error) {
         console.error('Error fetching subcategory by name:', error);
@@ -76,7 +85,7 @@ const CategoriesController = {
       try {
           const categoryId = req.params.id;
           const { name, subCategories } = req.body;
-  console.log("req.body in update category",req.body)
+
           if (!name || typeof name !== 'string') {
               throw new Error('Invalid category name: must be a string');
           }
@@ -91,14 +100,13 @@ const CategoriesController = {
         
           // Transform subCategories to only contain names
           const subCategoryObjects = subCategories.map((subCat,i) => {
-console.log("index",i)
-console.log("typeof(subCat)",typeof(subCat))
+
               if (typeof subCat === 'object' && subCat.id) {
-                console.log("typeof subCat === 'object' && subCat.id'")
+              
 
                   return { name: subCat.name || '', _id: subCat.id };
               } else if (typeof subCat === 'object' && !subCat.id) {
-                console.log("typeof subCat === 'object' && !subCat.id")
+           
                   const newId = new mongoose.Types.ObjectId();
                   return { name: subCat.name, _id: newId.toString() };
               }
@@ -128,15 +136,7 @@ console.log("typeof(subCat)",typeof(subCat))
           res.status(400).json({ message: error.message });
       }
   },
- 
-  
-  
-  
-  
-  
-  
-  
-  
+
   
   add: async (req, res) => {
     try {
@@ -158,7 +158,7 @@ console.log("typeof(subCat)",typeof(subCat))
       const savedSubCategories = [];
       if (Array.isArray(subCategories)) {
         for (const subCategoryData of subCategories) {
-      console.log("subCategoryData",subCategoryData)
+
             // Create a new subcategory object
             const subCategory = new SubCategoryModel({ name: subCategoryData.name });
             // Save the subcategory
@@ -197,6 +197,62 @@ console.log("typeof(subCat)",typeof(subCat))
         res.status(400).json({ message: error.message });
     }
 },
+getCategoryBySubcategory:async(req,res)=>
+{
+ 
+    try {
+    console.log("req.params.subcategoryName",req.params )// Access subcategoryName correctly)
+      const subcategoryName = req.params.subcategoryName; // Access subcategoryName correctly
+      
+      if (!subcategoryName) {
+        return res.status(400).json({ error: "subcategoryName is required" });
+      }
+
+      const categories = await CategoriesController.fetchCategories(); // Await the promise
+
+      
+      const category = categories.find(category =>
+        category.subCategories.some(subcategory => subcategory.name === subcategoryName)
+      );
+
+
+      if (!category) {
+        return res.status(404).json({ error: "Category not found" });
+      }
+      
+      return res.json(category); // Send the response with the found category
+    } catch (e) {
+      console.error(`Error finding category: ${e.message}`);
+      return res.status(500).json({ error: `Error finding category: ${e.message}` });
+    }
+  },
+
+  deleteCategory: async (req, res) => {
+    try {
+ 
+      const categoryId = req.params.id;
+
+      // Remove category from the database
+      const category = await CategoriesModel.findByIdAndDelete(categoryId);
+      if (!category) {
+        throw new Error(`Category with ID ${categoryId} not found`);
+      }
+
+      // Remove associated folder
+      const categoryPath = path.join(__dirname, '..', 'files', categoryId.toString());
+      if (fs.existsSync(categoryPath)) {
+        fs.rmSync(categoryPath, { recursive: true, force: true });
+      }
+
+      res.status(200).json({ message: `Category with ID ${categoryId} deleted successfully` });
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
+
+
+
 
 export default CategoriesController;

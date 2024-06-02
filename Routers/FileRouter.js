@@ -14,6 +14,7 @@ const FileRouter = express.Router();
 
 
 FileRouter.get('/:category/:subcategory/fileContent/:guidName',FileController.getFileContent) 
+FileRouter.get('/SearchfileContent/:subcategory',FileController.searchFileContent) 
 
 
 const storage = multer.diskStorage({
@@ -21,6 +22,8 @@ const storage = multer.diskStorage({
     try {
       console.log("req.body in multer.diskStorage", req.body);
       console.log("req.query in multer.diskStorage", req.query);
+      console.log("req.query.category in multer.diskStorage", req.query.category);
+
       
       const categoryId = await CategoriesController.getCategoryByName(req.query.category);
       const subcategoryId = await CategoriesController.getSubcategoryByName(req.query.category, req.query.subcategory);
@@ -54,6 +57,7 @@ const upload = multer({ storage: storage });
 FileRouter.delete('/:guidName', FileController.deleteFile);
 
 FileRouter.post('/upload',upload.single('file'),FileController.middlewareUpload),
+FileRouter.post('/exchange-file/:guidName', upload.single('file'), FileController.exchangeFile);
 FileRouter.use("/:category/:subcategory", (req, res, next) => {
   const { category, subcategory } = req.params;
   if (!category || !subcategory) {
@@ -65,6 +69,6 @@ FileRouter.use("/:category/:subcategory", (req, res, next) => {
   next();
 });
 
-FileRouter.get('/:category/:subcategory', FileController.filename);
+FileRouter.get('/:category/:subcategory', FileController.filenames);
 
 export default FileRouter;
