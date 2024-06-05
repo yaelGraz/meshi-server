@@ -11,7 +11,7 @@ import multer from 'multer';
 connectDB();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(bodyParser.json({ limit: "50mb" }));
@@ -41,6 +41,8 @@ app.use("/users",UserRouter);
 app.use("/categories", CategoriesRouter);
 app.use("/files", FileRouter); 
 console.log("process.env.PORT",process.env.PORT)
+
 app.listen(process.env.PORT||port||47581, () => {
+  
     console.log(`Example app listening on http://localhost:${port}`);
 });
