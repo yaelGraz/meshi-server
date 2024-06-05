@@ -40,7 +40,7 @@ app.use("/", UserRouter);
 app.use("/users",UserRouter);
 app.use("/categories", CategoriesRouter);
 app.use("/files", FileRouter); 
-
-app.listen(process.env.PORT||port, () => {
+console.log("process.env.PORT",process.env.PORT)
+app.listen(process.env.PORT||port||47581, () => {
     console.log(`Example app listening on http://localhost:${port}`);
 });
