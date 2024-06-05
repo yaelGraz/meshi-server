@@ -42,7 +42,7 @@ app.use("/categories", CategoriesRouter);
 app.use("/files", FileRouter); 
 console.log("process.env.PORT",process.env.PORT)
 
-app.listen(process.env.PORT||port||47581, () => {
+app.listen(port, () => {
   
     console.log(`Example app listening on http://localhost:${port}`);
 });
