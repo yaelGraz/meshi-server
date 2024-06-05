@@ -41,6 +41,6 @@ app.use("/users",UserRouter);
 app.use("/categories", CategoriesRouter);
 app.use("/files", FileRouter); 
 
-app.listen(port, () => {
+app.listen(process.env.PORT||port, () => {
     console.log(`Example app listening on http://localhost:${port}`);
 });
