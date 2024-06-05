@@ -7,7 +7,7 @@ import SubCategoryModel from "../Models/SubCategoryModel.js";
 import mongoose from 'mongoose';
 import { Console } from 'console';
 
-
+//try
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
