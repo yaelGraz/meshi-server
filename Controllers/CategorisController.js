@@ -210,7 +210,7 @@ getCategoryBySubcategory:async(req,res)=>
 
       const categories = await CategoriesController.fetchCategories(); // Await the promise
 
-      
+     
       const category = categories.find(category =>
         category.subCategories.some(subcategory => subcategory.name === subcategoryName)
       );
