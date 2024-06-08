@@ -197,36 +197,34 @@ console.log("subcategoryName in findSubcategory",subcategoryName)
         res.status(400).json({ message: error.message });
     }
 },
-getCategoryBySubcategory:async(req,res)=>
-{
- 
-    try {
-    console.log("req.params.subcategoryName",req.params )// Access subcategoryName correctly)
-      const subcategoryName = req.params.subcategoryName; // Access subcategoryName correctly
-      
-      if (!subcategoryName) {
-        return res.status(400).json({ error: "subcategoryName is required" });
-      }
-
-      const categories =  CategoriesController.fetchCategories(); // Await the promise
-
-     
-      const category = categories.findOne(category =>
-        category.subCategories.findOne(subcategory => subcategory.name === subcategoryName)
-      );
-
-
-      if (!category) {
-        return res.status(404).json({ error: "Category not found" });
-      }
-      
-      return res.json(category); // Send the response with the found category
-    } catch (e) {
-      console.error(`Error finding category: ${e.message}`);
+getCategoryBySubcategory: async (req, res) => {
+  try {
+    console.log("req.params.subcategoryName", req.params); // Log req.params for debugging
+    const subcategoryName = req.params.subcategoryName; // Access subcategoryName correctly
     
-      return res.status(500).json({ error: `Error finding category: ${e.message}` });
+    if (!subcategoryName) {
+      return res.status(400).json({ error: "subcategoryName is required" });
     }
-  },
+
+    const categories = await CategoriesController.fetchCategories(); // Await the promise
+
+    // Use find method to search the category
+    const category = categories.find(category =>
+      category.subCategories.find(subcategory => subcategory.name === subcategoryName)
+    );
+
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+    
+    return res.json(category); // Send the response with the found category
+  } catch (e) {
+    console.error(`Error finding category: ${e.message}`);
+  
+    return res.status(500).json({ error: `Error finding category: ${e.message}` });
+  }
+},
+
 
   deleteCategory: async (req, res) => {
     try {
