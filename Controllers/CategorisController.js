@@ -208,11 +208,10 @@ getCategoryBySubcategory:async(req,res)=>
         return res.status(400).json({ error: "subcategoryName is required" });
       }
 
-      const categories = await CategoriesController.fetchCategories(); // Await the promise
+      const categories =  CategoriesController.fetchCategories(); // Await the promise
 
      
       const category = categories.find(category =>
-        console.log("category",category),
         category.subCategories.findOne(subcategory => subcategory.name === subcategoryName)
       );
 
