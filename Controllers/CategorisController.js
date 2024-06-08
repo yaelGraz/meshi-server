@@ -212,7 +212,8 @@ getCategoryBySubcategory:async(req,res)=>
 
      
       const category = categories.find(category =>
-        category.subCategories.some(subcategory => subcategory.name === subcategoryName)
+        console.log("category",category),
+        category.subCategories.findOne(subcategory => subcategory.name === subcategoryName)
       );
 
 
@@ -223,6 +224,7 @@ getCategoryBySubcategory:async(req,res)=>
       return res.json(category); // Send the response with the found category
     } catch (e) {
       console.error(`Error finding category: ${e.message}`);
+    
       return res.status(500).json({ error: `Error finding category: ${e.message}` });
     }
   },
