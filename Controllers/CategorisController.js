@@ -209,8 +209,9 @@ getCategoryBySubcategory: async (req, res) => {
     const categories = await CategoriesController.fetchCategories(); // Await the promise
 console.log("categories",categories)
     // Use find method to search the category
-    const category = categories.find(category =>
-      category.subCategories.find(subcategory => subcategory.name === subcategoryName)
+    const category = categories?.find(category =>
+      category.subCategories.find(
+        subcategory => subcategory?.name === subcategoryName)
     );
 
     if (!category) {
