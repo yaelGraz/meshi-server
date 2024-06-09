@@ -55,7 +55,7 @@ const CategoriesController = {
           if (!Array.isArray(subcategories)) {   
             return null;
           }
-console.log("subcategories",subcategories)
+// console.log("subcategories",subcategories)
           for (const sub of subcategories) {   
             if (sub.name === subcategoryName) {
 console.log("subcategoryName in findSubcategory",subcategoryName)
