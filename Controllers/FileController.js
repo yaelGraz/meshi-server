@@ -1,4 +1,3 @@
-// FileController.js
 import FileModel from "../Models/FileModel.js";
 import CategoriesController from "./CategorisController.js";
 import multer from 'multer';
@@ -17,18 +16,19 @@ const currentDirectory = process.cwd();
 
 const FileController = {
   
-  middlewareUpload: async (req, res) => {
+  middlewareUpload:async(req,res)=>{ 
     try {
-      console.log("middlewareUpload called");
-      FileController.fileupload(req, res);
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Internal Server Error' });
-      }
+    // Attach additional parameters to the req object
+
+    // Call the file upload function from the controller
+     FileController.fileupload(req, res);
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal Server Error' });
     }
-  },
-  
+  }
+},
 
   getFileContent:async(req,res)=>{
     try {
@@ -212,7 +212,6 @@ console.log("filesDirectory in deleteFile", filesDirectory);
 
   fileupload: async (req, res) => {
     try {
-      console.log("fileupload called");
       const { category, subcategory } = req.query;
 
       const categoryId = await CategoriesController.getCategoryByName(category);
