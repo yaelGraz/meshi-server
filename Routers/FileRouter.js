@@ -56,7 +56,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 FileRouter.delete('/:guidName', FileController.deleteFile);
 
-FileRouter.post('/upload',upload.single('file'),FileController.middlewareUpload),
+FileRouter.post('/upload',upload.single('file'),FileController.fileupload),
 FileRouter.post('/exchange-file/:guidName', upload.single('file'), FileController.exchangeFile);
 FileRouter.use("/:category/:subcategory", (req, res, next) => {
   const { category, subcategory } = req.params;
