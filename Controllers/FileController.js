@@ -212,53 +212,56 @@ console.log("filesDirectory in deleteFile", filesDirectory);
 
 
   fileupload: async (req, res) => {
-    try { 
+    try {
       const { category, subcategory } = req.query;
 
-      const categoryId= await CategoriesController.getCategoryByName(category)
-      const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
-
+      const categoryId = await CategoriesController.getCategoryByName(category);
+      const subCategoryId = await CategoriesController.getSubcategoryByName(category, subcategory);
 
       if (!req.file || !req.file.originalname) {
         throw new Error('No file uploaded or file name not found');
       }
+
       // Get current directory path
       const __filename = fileURLToPath(import.meta.url);
       const __dirname = dirname(__filename);
-      
+
       // Generate unique name for the file
       const guidName = uuidv4();
 
       // Get file type from the original file name
-
       const fileType = req.file.originalname.split('.').pop();
 
       const relativeFilePath = `files/${categoryId}/${subCategoryId}`;
       const filePath = path.join(__dirname, `../${relativeFilePath}`);
-      
-      // Ensure directory exists
-      if (!fs.existsSync(filePath)) {
 
+      // Ensure directory exists
+      console.log('Ensuring directory exists at:', filePath);
+      if (!fs.existsSync(filePath)) {
+        console.log('Directory does not exist, creating:', filePath);
         fs.mkdirSync(filePath, { recursive: true });
+      } else {
+        console.log('Directory already exists:', filePath);
       }
-  
+
       const file = req.file;
-      const destination = `${filePath}/${guidName}.${fileType}`; // Updated destination
-  
+      const destination = `${filePath}/${guidName}.${fileType}`;
+      console.log('Moving file to destination:', destination);
+
       // Move the uploaded file to the destination
       fs.renameSync(file.path, destination);
-  
+
       // Save file metadata to MongoDB
       const fileData = new FileModel({
-         TYPE: fileType,
-         GUIDNAME: guidName,
-         DATE: new Date(),
-         fileName: file.filename,
-         path: `${relativeFilePath}/${guidName}.${fileType}`,  // Updated path format
+        TYPE: fileType,
+        GUIDNAME: guidName,
+        DATE: new Date(),
+        fileName: req.file.originalname,  // Make sure to use the correct field name
+        path: `${relativeFilePath}/${guidName}.${fileType}`,
       });
-  
+
       await fileData.save();
-  
+
       res.status(200).json({ message: 'File uploaded successfully' });
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -266,7 +269,7 @@ console.log("filesDirectory in deleteFile", filesDirectory);
         res.status(500).json({ error: 'Internal Server Error' });
       }
     }
-},
+  },
 
 getGuidNameByFileName: async (fileName) => {
   try {
