@@ -340,7 +340,7 @@ getFileTypeByGuidName: async (guidName) => {
       const categoryId = await CategoriesController.getCategoryByName(category);
       const subCategoryId = await CategoriesController.getSubcategoryByName(category, subcategory);
 
-      const result = await saveFile(req, categoryId, subCategoryId);
+      const result = await FileController.saveFile(req, categoryId, subCategoryId);
 
       res.status(200).json({ message: result.message });
     } catch (error) {
@@ -388,7 +388,7 @@ getFileTypeByGuidName: async (guidName) => {
       }
     }
   },
-  saveFile:async(req, categoryId, subCategoryId) =>{
+ saveFile:async(req, categoryId, subCategoryId) =>{
     if (!req.file || !req.file.originalname) {
       throw new Error('No file uploaded or file name not found');
     }
@@ -438,8 +438,8 @@ getFileTypeByGuidName: async (guidName) => {
       path: fileData.path,
       guidName: fileData.GUIDNAME,
     };
-},
-
 }
+}
+
 
 export default FileController;
