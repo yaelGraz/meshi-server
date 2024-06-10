@@ -336,27 +336,25 @@ getFileTypeByGuidName: async (guidName) => {
   fileupload: async (req, res) => {
     try {
       const { category, subcategory } = req.query;
-
+  
       const categoryId = await CategoriesController.getCategoryByName(category);
       const subCategoryId = await CategoriesController.getSubcategoryByName(category, subcategory);
-
+  
       if (!req.file || !req.file.originalname) {
         throw new Error('No file uploaded or file name not found');
       }
-
+  
       // Get current directory path
       const __filename = fileURLToPath(import.meta.url);
       const __dirname = dirname(__filename);
-
-      // Generate unique name for the file
-      const guidName = uuidv4();
-
-      // Get file type from the original file name
-      const fileType = req.file.originalname.split('.').pop();
-
+  
+      // Use the unique ID and extension generated in the filename function
+      const guidName = req.fileId;
+      const fileType = req.fileExtension;
+  
       const relativeFilePath = `files/${categoryId}/${subCategoryId}`;
-      const filePath = join(__dirname, `../${relativeFilePath}`);
-
+      const filePath = path.join(__dirname, `../${relativeFilePath}`);
+  
       // Ensure directory exists
       console.log('Ensuring directory exists at:', filePath);
       if (!fs.existsSync(filePath)) {
@@ -365,35 +363,32 @@ getFileTypeByGuidName: async (guidName) => {
       } else {
         console.log('Directory already exists:', filePath);
       }
-
-      const file = req.file;
-      console.log('Uploaded file info:', file);
-
-      const destination = `${filePath}/${guidName}.${fileType}`;
+  
+      const destination = `${filePath}/${guidName}${fileType}`;
       console.log('Moving file to destination:', destination);
-
+  
       // Move the uploaded file to the destination
-      fs.renameSync(file.path, destination);
-
+      fs.renameSync(req.file.path, destination);
+  
       // Save file metadata to MongoDB
       const fileData = new FileModel({
-        TYPE: fileType,
+        TYPE: fileType.slice(1), // Remove the dot from the extension
         GUIDNAME: guidName,
         DATE: new Date(),
-        fileName: req.file.originalname,  // Make sure to use the correct field name
-        path: `${relativeFilePath}/${guidName}.${fileType}`,
+        fileName: req.file.originalname, // Original file name
+        path: `${relativeFilePath}/${guidName}${fileType}`,
       });
-
+  
       await fileData.save();
-
+  
       res.status(200).json({ message: 'File uploaded successfully' });
     } catch (error) {
       console.error('Error uploading file:', error);
       if (!res.headersSent) {
         res.status(500).json({ error: 'Internal Server Error' });
       }
-    }
-  },
+  }
+ },
 
 
   exchangeFile: async (req, res) => {
