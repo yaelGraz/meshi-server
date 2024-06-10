@@ -81,7 +81,7 @@ const storage = multer.diskStorage({
     const decodedFileName = iconv.decode(iconv.encode(encodedFileName, 'binary'), 'utf-8').toString();
     console.log("decodedFileName", decodedFileName);
 
-    cb(null, decodedFileName);
+    // cb(null, decodedFileName);
   },
 });
 
