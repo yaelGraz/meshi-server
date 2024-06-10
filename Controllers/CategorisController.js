@@ -44,8 +44,8 @@ const CategoriesController = {
     getSubcategoryByName: async (categoryName, subcategoryName) => {
       try {
         // Fetch the category first 
-        console.log("categoryName in  getSubcategoryByName",categoryName) 
-        console.log("subcategoryName in  getSubcategoryByName",subcategoryName) 
+        // console.log("categoryName in  getSubcategoryByName",categoryName) 
+        // console.log("subcategoryName in  getSubcategoryByName",subcategoryName) 
         const category = await CategoriesModel.findOne({ name: categoryName })
         if (!category) {
           throw new Error(`Category "${categoryName}" not found`);
@@ -58,7 +58,7 @@ const CategoriesController = {
 // console.log("subcategories",subcategories)
           for (const sub of subcategories) {   
             if (sub.name === subcategoryName) {
-console.log("subcategoryName in findSubcategory",subcategoryName)
+// console.log("subcategoryName in findSubcategory",subcategoryName)
               return sub._id;
             }
             if (sub.subcategories && sub.subcategories.length > 0) {
@@ -199,7 +199,7 @@ console.log("subcategoryName in findSubcategory",subcategoryName)
 },
 getCategoryBySubcategory: async (req, res) => {
   try {
-    console.log("req.params.subcategoryName", req.params); // Log req.params for debugging
+    // console.log("req.params.subcategoryName", req.params); // Log req.params for debugging
     const subcategoryName = req.params.subcategoryName; // Access subcategoryName correctly
     
     if (!subcategoryName) {
@@ -207,7 +207,7 @@ getCategoryBySubcategory: async (req, res) => {
     }
 
     const categories = await CategoriesController.fetchCategories(); // Await the promise
-console.log("categories",categories)
+// console.log("categories",categories)
     // Use find method to search the category
     const category = categories?.find(category =>
       category.subCategories.find(

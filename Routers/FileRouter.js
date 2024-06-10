@@ -57,7 +57,26 @@ const upload = multer({
       try {
         const categoryId = await CategoriesController.getCategoryByName(req.query.category);
         const subcategoryId = await CategoriesController.getSubcategoryByName(req.query.category, req.query.subcategory);
-
+ // Generate unique name for the file
+//       const newGuidName = uuidv4();
+  
+//       // Get file type from the original file name
+//       const fileType = req.file.originalname.split('.').pop();
+  
+//       const relativeFilePath = `files/${categoryId}/${subCategoryId}`;
+//       const newFilePath = path.join(__dirname, `../${relativeFilePath}`);
+  
+//       // Ensure directory exists
+//       if (!fs.existsSync(newFilePath)) {
+//         fs.mkdirSync(newFilePath, { recursive: true });
+//       }
+  
+//       const newFile = req.file;
+//       const destination = `${newFilePath}/${newGuidName}.${fileType}`;
+  
+//       // Move the uploaded file to the destination
+//       fs.renameSync(newFile.path, destination);
+  
         const uploadPath = `./files/${categoryId}/${subcategoryId}/`;
         cb(null, uploadPath);
       } catch (error) {
