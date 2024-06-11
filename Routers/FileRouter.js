@@ -64,7 +64,7 @@ const storage = multer.diskStorage({
       console.log("categoryId in multer.diskStorage", categoryId);
       console.log("subcategoryId in multer.diskStorage", subcategoryId);
       
-      const uploadPath = `./files/${categoryId}/${subcategoryId}/`;
+      const uploadPath = `../files/${categoryId}/${subcategoryId}/`;
       cb(null, uploadPath);
     } catch (error) {
       console.error('Error getting category or subcategory:', error);
