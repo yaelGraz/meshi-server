@@ -63,8 +63,13 @@ const storage = multer.diskStorage({
 
       console.log("categoryId in multer.diskStorage", categoryId);
       console.log("subcategoryId in multer.diskStorage", subcategoryId);
-      
-      const uploadPath = `../files/${categoryId}/${subcategoryId}/`;
+
+      // Construct the upload path
+      const uploadPath = path.resolve(__dirname, `../files/${categoryId}/${subcategoryId}/`);
+
+      // Ensure the directory exists
+      fs.mkdirSync(uploadPath, { recursive: true });
+
       cb(null, uploadPath);
     } catch (error) {
       console.error('Error getting category or subcategory:', error);
@@ -73,15 +78,22 @@ const storage = multer.diskStorage({
   },
 
   filename: (req, file, cb) => {
-    const guidName = req.body.guidName;
-    console.log("guidName in fileName in multer.diskStorage:",guidName)
-    const encodedFileName = file.originalname;
-    console.log("encodedFileName", encodedFileName);
-    // Decode the file name using iconv-lite directly to utf-8
-    const decodedFileName = iconv.decode(iconv.encode(encodedFileName, 'binary'), 'utf-8').toString();
-    console.log("decodedFileName", decodedFileName);
+    try {
+      const guidName = req.body.guidName;
+      console.log("guidName in fileName in multer.diskStorage:", guidName);
+      
+      const encodedFileName = file.originalname;
+      console.log("encodedFileName", encodedFileName);
+      
+      // Decode the file name using iconv-lite directly to utf-8
+      const decodedFileName = iconv.decode(iconv.encode(encodedFileName, 'binary'), 'utf-8').toString();
+      console.log("decodedFileName", decodedFileName);
 
-     cb(null, decodedFileName);
+      cb(null, decodedFileName);
+    } catch (error) {
+      console.error('Error encoding file name:', error);
+      cb(error);
+    }
   },
 });
 
