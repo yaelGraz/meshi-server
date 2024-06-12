@@ -12,7 +12,7 @@ const UserController={
           userName: userName,
           password: password
         });
-        console.log("user:",user)
+        // console.log("user:",user)
      
         if (user) {
           console.log("200")

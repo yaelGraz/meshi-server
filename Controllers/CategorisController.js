@@ -140,7 +140,7 @@ const CategoriesController = {
   
   add: async (req, res) => {
     try {
-       console.leg("i am in add category")
+       console.log("i am in add category")
       const { name, subCategories } = req.body;
     
       // Validate input data (optional but recommended)
