@@ -9,6 +9,8 @@ import CategoriesController from "../Controllers/CategorisController.js";
 import { Console } from "console";
 const FileRouter = express.Router();
 import { v4 as uuidv4 } from 'uuid';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 
 
@@ -51,6 +53,7 @@ FileRouter.get('/SearchfileContent/:subcategory',FileController.searchFileConten
 //     cb(null, decodedFileName);
 //   },
 // });
+ 
 
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
@@ -63,8 +66,11 @@ const storage = multer.diskStorage({
 
       console.log("categoryId in multer.diskStorage", categoryId);
       console.log("subcategoryId in multer.diskStorage", subcategoryId);
-
-      // Construct the upload path
+  // Construct the upload path
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+   
+      //     const __dirname = dirname(__filename);
       const uploadPath = path.resolve(__dirname, `../files/${categoryId}/${subcategoryId}/`);
 
       // Ensure the directory exists
