@@ -177,7 +177,9 @@ const CategoriesController = {
 
         // Create category folder
         const categoryPath = path.join(__dirname, '..', 'files', newCategory._id.toString());
+        console.log("categoryPath",categoryPath)
         if (!fs.existsSync(categoryPath)) {
+          console.log("!fs.existsSync(categoryPath)no  eexisst ccategry folder")
             fs.mkdirSync(categoryPath, { recursive: true });
         }
 
