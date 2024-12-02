@@ -84,9 +84,9 @@ const FileController = {
       //const GUIDNAME=await FileController.getGuidNameByFileName(req.params.fileName)
         const fileType=await FileController.getFileTypeByGuidName(fileNames[0]?.guidName)
       const relativePath = `files/${categoryId}/${subcategoryId}/${fileNames[0]?.guidName}.${fileType}`;
-      console.log("relativePath",relativePath)
+
       const pathToCheck = path.resolve(relativePath);
-      console.log("pathToCheck",pathToCheck)
+
   
       if (!fs.existsSync(pathToCheck)) {
         console.log("File does not exist on server!!!");

@@ -5,7 +5,7 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import SubCategoryModel from "../Models/SubCategoryModel.js";
 import mongoose from 'mongoose';
-import { Console } from 'console';
+
 
 //try
 const __filename = fileURLToPath(import.meta.url);
@@ -16,6 +16,7 @@ const CategoriesController = {
     try {
       const categories = await CategoriesModel.find({});
       return categories;
+      
     } catch (e) {
       throw new Error(`Error fetching categories: ${e.message}`);
     }
@@ -44,8 +45,6 @@ const CategoriesController = {
     getSubcategoryByName: async (categoryName, subcategoryName) => {
       try {
         // Fetch the category first 
-        // console.log("categoryName in  getSubcategoryByName",categoryName) 
-        // console.log("subcategoryName in  getSubcategoryByName",subcategoryName) 
         const category = await CategoriesModel.findOne({ name: categoryName })
         if (!category) {
           throw new Error(`Category "${categoryName}" not found`);
@@ -55,10 +54,10 @@ const CategoriesController = {
           if (!Array.isArray(subcategories)) {   
             return null;
           }
-// console.log("subcategories",subcategories)
+
           for (const sub of subcategories) {   
             if (sub.name === subcategoryName) {
-// console.log("subcategoryName in findSubcategory",subcategoryName)
+
               return sub._id;
             }
             if (sub.subcategories && sub.subcategories.length > 0) {
@@ -140,7 +139,7 @@ const CategoriesController = {
   
   add: async (req, res) => {
     try {
-       console.log("i am in add category")
+      
       const { name, subCategories } = req.body;
     
       // Validate input data (optional but recommended)
@@ -177,9 +176,8 @@ const CategoriesController = {
 
         // Create category folder
         const categoryPath = path.join(__dirname, '..', 'files', newCategory._id.toString());
-        console.log("categoryPath",categoryPath)
+   
         if (!fs.existsSync(categoryPath)) {
-          console.log("!fs.existsSync(categoryPath)no  eexisst ccategry folder")
             fs.mkdirSync(categoryPath, { recursive: true });
         }
 
@@ -201,15 +199,15 @@ const CategoriesController = {
 },
 getCategoryBySubcategory: async (req, res) => {
   try {
-    // console.log("req.params.subcategoryName", req.params); // Log req.params for debugging
+ 
     const subcategoryName = req.params.subcategoryName; // Access subcategoryName correctly
-    
+    console.log("subcategoryName",subcategoryName)
     if (!subcategoryName) {
       return res.status(400).json({ error: "subcategoryName is required" });
     }
 
     const categories = await CategoriesController.fetchCategories(); // Await the promise
-// console.log("categories",categories)
+
     // Use find method to search the category
     const category = categories?.find(category =>
       category.subCategories.find(
