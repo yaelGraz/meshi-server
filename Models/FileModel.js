@@ -1,12 +1,9 @@
 import mongoose from "mongoose";
 
-  const FileSchema=mongoose.Schema({
-     TYPE:String,
-     GUIDNAME:String,
-     DATE:Date,
-     fileName:String,
-     path:String
-
- })
+const FileSchema=mongoose.Schema({
+    name: String,
+    type: String,
+    data: Buffer
+})
 
 export default mongoose.model("files",FileSchema);
