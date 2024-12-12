@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
- HEAD
+
 //const uri="mongodb://localhost:27017/meshiDB";
 //const uri="mongodb+srv://yaelig053:<yaelig053>@cluster0.0lh8d.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 //const dbURI = "mongodb+srv://yaelig053:<yaelig053>@cluster0.0lh8d.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
