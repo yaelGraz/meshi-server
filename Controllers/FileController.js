@@ -1,6 +1,6 @@
 // FileController.js
 import FileModel from "../Models/FileModel.js";
-import CategoriesController from "./CategoriesController.js";
+import CategoriesController from "./CategorisController.js";
 import multer from 'multer';
 import mongoose from 'mongoose';
 import path from 'path';
