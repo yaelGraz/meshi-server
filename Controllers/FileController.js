@@ -1,6 +1,6 @@
-
-import FileModel from "../Models/FileModel.js";
-import CategoriesController from "./CategorisController.js";
+// FileController.js
+import FileModel from "../Models/fileModel.js";
+import CategoriesController from "./CategoriesController.js";
 import multer from 'multer';
 import mongoose from 'mongoose';
 import path from 'path';
@@ -9,14 +9,13 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
-import  iconv from 'iconv'
+
 
 const currentDirectory = process.cwd();
 
 
 
 const FileController = {
-  
   middlewareUpload:async(req,res)=>{ 
     try {
     // Attach additional parameters to the req object
@@ -36,15 +35,15 @@ const FileController = {
 
   getFileContent:async(req,res)=>{
     try {
-
+      console.log("i am in /:category/:subcategory/fileContent/:guidName ")
+      console.log("req.params",req.params)
       const decodedFileName = decodeURIComponent(req.params.fileName);
       const { category, subcategory,guidName } = req.params;
-
-
+      console.log("req.params",req.params)
       const categoryId = await CategoriesController.getCategoryByName(category);
-
+    console.log("categoryId",categoryId)
         const subcategoryId = await CategoriesController.getSubcategoryByName(category, subcategory);
-
+        console.log("subcategoryId",categoryId)
       //  const GUIDNAME=await FileController.getGuidNameByFileName(req.params.fileName)
         const fileType=await FileController.getFileTypeByGuidName(guidName)
       const relativePath = `files/${categoryId}/${subcategoryId}/${guidName}.${fileType}`;
@@ -71,114 +70,6 @@ const FileController = {
       res.status(500).json({ error: 'Internal Server Error' });
     }
   },
-  searchFileContent:async(req,res)=>{
-    try {
-      const { subcategory} = req.params;
-      const categories=await CategoriesController.fetchCategories();
-      const category = categories.find(category =>  category.subcategories.some(subcategory => subcategory.name === subcategoryName))
-     const categoryId = category._id;
-
-       const subcategoryId = await CategoriesController.getSubcategoryByName(category.name, subcategory);
-
-        const fileNames=FileController.filename(category.name,subcategory.name)
-
-      //const GUIDNAME=await FileController.getGuidNameByFileName(req.params.fileName)
-        const fileType=await FileController.getFileTypeByGuidName(fileNames[0]?.guidName)
-      const relativePath = `files/${categoryId}/${subcategoryId}/${fileNames[0]?.guidName}.${fileType}`;
-
-      const pathToCheck = path.resolve(relativePath);
-
-  
-      if (!fs.existsSync(pathToCheck)) {
-        console.log("File does not exist on server!!!");
-        return res.status(404).json({ error: 'File not found on server' });
-      }
-  
-      const fileData = await FileModel.findOne({ path: relativePath });
-  
-      if (!fileData) {
-        console.log("File not found in database!!!");
-        return res.status(404).json({ error: 'File not found in database' });
-      }
-  
-      res.sendFile(pathToCheck);
-  
-    } catch (error) {
-      console.error('Error fetching file content:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
- exchangeFile : async (req, res) => {
-    try {
-      const { guidName } = req.params;
-      const { category, subcategory } = req.query;
-  
-      // Find the file by GUIDNAME
-      const file = await FileModel.findOne({ GUIDNAME: guidName });
-      if (!file) {
-        return res.status(404).json({ error: 'File not found' });
-      }
-  
-      // Remove file from database
-      await FileModel.deleteOne({ GUIDNAME: guidName });
-  
-      // Remove file from disk
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = dirname(__filename);
-      const filesDirectory = path.join(__dirname, '../'); // Go up one directory from the location of FileController.js
-      const filePath = path.join(filesDirectory, file.path); // Construct the file path using the files directory
-  
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-  
-      // Proceed to upload the new file
-      const categoryId = await CategoriesController.getCategoryByName(category);
-      const subCategoryId = await CategoriesController.getSubcategoryByName(category, subcategory);
-  
-      if (!req.file || !req.file.originalname) {
-        throw new Error('No file uploaded or file name not found');
-      }
-  
-      // Generate unique name for the file
-      const newGuidName = uuidv4();
-  
-      // Get file type from the original file name
-      const fileType = req.file.originalname.split('.').pop();
-  
-      const relativeFilePath = `files/${categoryId}/${subCategoryId}`;
-      const newFilePath = path.join(__dirname, `../${relativeFilePath}`);
-  
-      // Ensure directory exists
-      if (!fs.existsSync(newFilePath)) {
-        fs.mkdirSync(newFilePath, { recursive: true });
-      }
-  
-      const newFile = req.file;
-      const destination = `${newFilePath}/${newGuidName}.${fileType}`;
-  
-      // Move the uploaded file to the destination
-      fs.renameSync(newFile.path, destination);
-  
-      // Save file metadata to MongoDB
-      const newFileData = new FileModel({
-        TYPE: fileType,
-        GUIDNAME: newGuidName,
-        DATE: new Date(),
-        fileName: newFile.filename,
-        path: `${relativeFilePath}/${newGuidName}.${fileType}`,
-      });
-  
-      await newFileData.save();
-  
-      res.status(200).json({ message: 'File exchanged successfully' });
-    } catch (error) {
-      console.error('Error exchanging file:', error);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Internal Server Error' });
-      }
-    }
-  },
 
   deleteFile: async (req, res) => {
     try {
@@ -186,7 +77,7 @@ const FileController = {
   
       // Find the file by GUIDNAME
       const file = await FileModel.findOne({ GUIDNAME: guidName });
-
+      console.log("Found file in deleteFile ");
   
       if (!file) {
         return res.status(404).json({ error: 'File not found' });
@@ -199,11 +90,11 @@ const FileController = {
       const __filename = fileURLToPath(import.meta.url);
       const __dirname = dirname(__filename);
       const filesDirectory = path.join(__dirname, '../'); // Go up one directory from the location of FileController.js
+console.log("filesDirectory in delteFil",filesDirectory)
 const filePath = path.join(filesDirectory, file.path); // Construct the file path using the files directory
 console.log("filesDirectory in deleteFile", filesDirectory);
 
-    fs.unlinkSync(filePath);
-    
+fs.unlinkSync(filePath);
   
       res.json({ message: 'File deleted successfully' });
     } catch (error) {
@@ -214,74 +105,70 @@ console.log("filesDirectory in deleteFile", filesDirectory);
   
 
 
-  // fileupload: async (req, res) => {
-  //   try {
-  //     const { category, subcategory } = req.query;
+  fileupload: async (req, res) => {
+    try { 
+      const { category, subcategory } = req.query;
+      // console.log("req.body in fileupload",req.body)
+      // console.log("req.query in fileupload",req.query)
+      const categoryId= await CategoriesController.getCategoryByName(category)
+      const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
+      // console.log("categoryId",categoryId)
+      // console.log("subCategoryId",subCategoryId)
 
-  //     const categoryId = await CategoriesController.getCategoryByName(category);
-  //     const subCategoryId = await CategoriesController.getSubcategoryByName(category, subcategory);
-
-  //     if (!req.file || !req.file.originalname) {
-  //       throw new Error('No file uploaded or file name not found');
-  //     }
-
-  //     // Get current directory path
-  //     const __filename = fileURLToPath(import.meta.url);
-  //     const __dirname = dirname(__filename);
-
-  //     // Generate unique name for the file
-  //     const guidName = uuidv4();
-
-  //     // Get file type from the original file name
-  //     const fileType = req.file.originalname.split('.').pop();
-
-  //     const relativeFilePath = `files/${categoryId}/${subCategoryId}`;
-  //     const filePath = path.join(__dirname, `../${relativeFilePath}`);
-
+      if (!req.file || !req.file.originalname) {
+        throw new Error('No file uploaded or file name not found');
+      }
+      // Get current directory path
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = dirname(__filename);
       
-  //     // Ensure directory exists
-  //     console.log('Ensuring directory exists at:', filePath);
-  //     if (!fs.existsSync(filePath)) {
-  //       console.log('Directory does not exist, creating:', filePath);
-  //       fs.mkdirSync(filePath, { recursive: true });
-  //     } else {
-  //       console.log('Directory already exists:', filePath);
-  //     }
+      // Generate unique name for the file
+      const guidName = uuidv4();
 
-  //     const file = req.file;
-        
-  //     const destination = `${filePath}/${guidName}.${fileType}`;
-  //     console.log('Moving file to destination:', destination);
+      // Get file type from the original file name
 
-  //     // Move the uploaded file to the destination
-  //     fs.renameSync(file.path, destination);
+      const fileType = req.file.originalname.split('.').pop();
 
-  //     // Save file metadata to MongoDB
-  //     const fileData = new FileModel({
-  //       TYPE: fileType,
-  //       GUIDNAME: guidName,
-  //       DATE: new Date(),
-  //       fileName: req.file.originalname,  // Make sure to use the correct field name
-  //       path: `${relativeFilePath}/${guidName}.${fileType}`,
-  //     });
-
-  //     await fileData.save();
-
-  //     res.status(200).json({ message: 'File uploaded successfully' });
-  //   } catch (error) {
-  //     console.error('Error uploading file:', error);
-  //     if (!res.headersSent) {
-  //       res.status(500).json({ error: 'Internal Server Error' });
-  //     }
-  //   }
-  // },
+      const relativeFilePath = `files/${categoryId}/${subCategoryId}`;
+      const filePath = path.join(__dirname, `../${relativeFilePath}`);
+      
+      // Ensure directory exists
+      if (!fs.existsSync(filePath)) {
+        fs.mkdirSync(filePath, { recursive: true });
+      }
+  
+      const file = req.file;
+      const destination = `${filePath}/${guidName}.${fileType}`; // Updated destination
+  
+      // Move the uploaded file to the destination
+      fs.renameSync(file.path, destination);
+  
+      // Save file metadata to MongoDB
+      const fileData = new FileModel({
+         TYPE: fileType,
+         GUIDNAME: guidName,
+         DATE: new Date(),
+         fileName: file.filename,
+         path: `${relativeFilePath}/${guidName}.${fileType}`,  // Updated path format
+      });
+  
+      await fileData.save();
+  
+      res.status(200).json({ message: 'File uploaded successfully' });
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    }
+},
 
 getGuidNameByFileName: async (fileName) => {
   try {
-
+    // console.log("fileName in getGuidNameByFileName",fileName)
     // Find the file in the database by file name
     const fileData = await FileModel.findOne({ fileName: fileName });
-
+    // console.log("fileData in getGuidNameByFileName",fileData)
     // If the file data is found, return the GUIDNAME
     if (fileData && fileData.GUIDNAME) {
       return fileData.GUIDNAME;
@@ -297,7 +184,7 @@ getFileTypeByGuidName: async (guidName) => {
   try {
     // Find the file in the database by file name
     const fileData = await FileModel.findOne({ GUIDNAME: guidName });
-
+// console.log("fileData in getFileTypeByGuidName:",fileData)
     // If the file data is found, return the GUIDNAME
     if (fileData && fileData.TYPE) {
       return fileData.TYPE;
@@ -310,86 +197,29 @@ getFileTypeByGuidName: async (guidName) => {
   }
 },
   
-  filenames: async (req, res) => {
+  filename: async (req, res) => {
     try {
-
+// console.log("i am in fileame in fileController")
       const { category, subcategory } = req.params;
-      console.log("req.params",req.params)
-
+      // console.log("category",category)
       const categoryId= await CategoriesController.getCategoryByName(category)
-
+      // console.log("categoryId",categoryId)
       const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
-                                                                
-     
       const pathPrefix = `files/${categoryId}/${subCategoryId}`;
       //const pathPrefix = `files\\`;
-      console.log(" pathPrefix ", pathPrefix )
+      // console.log("pathPrefix",pathPrefix)
       const files = await FileModel.find({ path: { $regex: `^${pathPrefix}` } }); 
       const fileNames = files.map(file => ({ 
         fileName: file.fileName, 
         guidName: file.GUIDNAME
       }));
-      console.log(" fileNames", fileNames)
-
       res.json(fileNames);
     } catch (error) {
       console.error('Error fetching file names:', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
-  },
- 
-// getFileData: async (req, res) => {
-//     try {
-//       const { fileName } = req.params;
-
-//       // Fetch the file data from MongoDB based on the file name
-//       const file = await FileModel.findOne({ name: fileName });
-
-//       if (!file) {
-//         return res.status(404).json({ error: 'File not found' });
-//       }
-//       const base64Data = file.data.toString('base64');
-//       console.log("base64Data",base64Data)
-//       // Set the response headers
-//       res.setHeader('Content-Type', file.type);
-//       //res.setHeader('Content-Disposition', 'attachment; filename="example.docx"');
-//       res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.name)}"`);
-      
-//       // Send the file data as the response
-//       res.send(base64Data);
-//     } catch (error) {
-//       console.error('Error fetching file data:', error);
-//       res.status(500).json({ error: 'Internal Server Error' });
-//     }    
-//   },
-
-
-  getFileData: async (req, res) => {
-    try {
-      const { fileName } = req.params;
-
-      // Fetch the file data from MongoDB based on the file name
-      const file = await FileModel.findOne({ name: fileName });
-
-      if (!file) {
-        return res.status(404).json({ error: 'File not found' });
-      }
-
-      // Set the response headers
-      res.setHeader('Content-Type', file.type);
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.name)}"`);
-
-      // Send the binary data as the response
-      res.send(file.data);
-    } catch (error) {
-      console.error('Error fetching file data:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
+  }
 };
-
-
-
 
 
 
