@@ -3,7 +3,7 @@ import FileController from "../Controllers/FileController.js";
 const FileRouter=express.Router();
 import multerUpload from "../multerConfig.js";
 
-FileRouter.post('/upload', multerUpload.single('file'), FileController.fileUpload);
+FileRouter.post('/upload', multerUpload.single('file'), FileController.fileupload);
 FileRouter.get('', FileController.getFileNames);
 
 // Route to fetch file data based on file name
