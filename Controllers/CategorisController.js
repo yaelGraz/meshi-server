@@ -82,6 +82,8 @@ const CategoriesController = {
  
     updateCategory: async (req, res) => {
       try {
+        console.log('Request params:', req.params); // Should show `id`
+console.log('Request body:', req.body); //
           const categoryId = req.params.id;
           const { name, subCategories } = req.body;
 
