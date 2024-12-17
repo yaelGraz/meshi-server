@@ -118,6 +118,8 @@ fs.unlinkSync(filePath);
       if (!req.file || !req.file.originalname) {
         throw new Error('No file uploaded or file name not found');
       }
+      console.log("Uploaded file details:", req.file); // Log the uploaded file object
+
       // Get current directory path
       const __filename = fileURLToPath(import.meta.url);
       const __dirname = dirname(__filename);
@@ -157,6 +159,7 @@ fs.unlinkSync(filePath);
       res.status(200).json({ message: 'File uploaded successfully' });
     } catch (error) {
       console.error('Error uploading file:', error);
+      console.error('Error details:', error.stack);
       if (!res.headersSent) {
         res.status(500).json({ error: 'Internal Server Error',error });
       }
