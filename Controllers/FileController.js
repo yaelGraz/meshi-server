@@ -158,10 +158,11 @@ fs.unlinkSync(filePath);
     } catch (error) {
       console.error('Error uploading file:', error);
       if (!res.headersSent) {
-        res.status(500).json({ error: 'Internal Server Error' });
+        res.status(500).json({ error: 'Internal Server Error',error });
       }
     }
 },
+
 
 getGuidNameByFileName: async (fileName) => {
   try {
