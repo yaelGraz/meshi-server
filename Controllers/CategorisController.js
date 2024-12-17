@@ -45,7 +45,7 @@ const CategoriesController = {
     getSubcategoryByName: async (categoryName, subcategoryName) => {
       try {
         // Fetch the category first 
-        const category = await CategoriesModel.findOne({ name: categoryName })
+        const category = await CategoriesModel.findOne({ name: categoryName.name })
         if (!category) {
           throw new Error(`Category "${categoryName}" not found`);
         }
@@ -82,8 +82,7 @@ const CategoriesController = {
  
     updateCategory: async (req, res) => {
       try {
-        console.log('Request params:', req.params); // Should show `id`
-console.log('Request body:', req.body); //
+        
           const categoryId = req.params.id;
           const { name, subCategories } = req.body;
 
