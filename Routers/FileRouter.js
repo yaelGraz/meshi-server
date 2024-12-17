@@ -12,7 +12,7 @@ FileRouter.get('/:fileName', FileController.getFileData);
 
 
 FileRouter.get('/:category/:subcategory/fileContent/:guidName',FileController.getFileContent) 
-FileRouter.get('/SearchfileContent/:subcategory',FileController.searchFileContent) 
+//FileRouter.get('/SearchfileContent/:subcategory',FileController.searchFileContent) 
 
 
 const storage = multer.diskStorage({
