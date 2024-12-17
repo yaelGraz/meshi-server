@@ -2,6 +2,7 @@ import  express  from "express";
 import FileController from "../Controllers/FileController.js";
 const FileRouter=express.Router();
 import multerUpload from "../multerConfig.js";
+import multer from 'multer'; 
 
 FileRouter.post('/upload', multerUpload.single('file'), FileController.fileupload);
 //FileRouter.get('', FileController.getFileNames);
