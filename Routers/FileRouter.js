@@ -4,7 +4,7 @@ const FileRouter=express.Router();
 import multerUpload from "../multerConfig.js";
 
 FileRouter.post('/upload', multerUpload.single('file'), FileController.fileupload);
-FileRouter.get('', FileController.getFileNames);
+//FileRouter.get('', FileController.getFileNames);
 
 // Route to fetch file data based on file name
 FileRouter.get('/:fileName', FileController.filename);
@@ -67,7 +67,7 @@ FileRouter.use("/:category/:subcategory", (req, res, next) => {
   next();
 });
 
-FileRouter.get('/:category/:subcategory', FileController.filenames);
+FileRouter.get('/:category/:subcategory', FileController.filename);
 
 export default FileRouter;
 
