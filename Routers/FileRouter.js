@@ -7,7 +7,7 @@ FileRouter.post('/upload', multerUpload.single('file'), FileController.fileuploa
 FileRouter.get('', FileController.getFileNames);
 
 // Route to fetch file data based on file name
-FileRouter.get('/:fileName', FileController.getFileData);
+FileRouter.get('/:fileName', FileController.filename);
 
 
 
