@@ -218,7 +218,44 @@ getFileTypeByGuidName: async (guidName) => {
       console.error('Error fetching file names:', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
-  }
+  },
+  exchangeFile: async (req, res) => {
+    try {
+      const { guidName } = req.params;
+      const { category, subcategory } = req.query;
+
+      // Find the file by GUIDNAME
+      const file = await FileModel.findOne({ GUIDNAME: guidName });
+      if (!file) {
+        return res.status(404).json({ error: 'File not found' });
+      }
+
+      // Remove file from database
+      await FileModel.deleteOne({ GUIDNAME: guidName });
+
+      // Remove file from disk
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = dirname(__filename);
+      const filesDirectory = path.join(__dirname, '../'); // Go up one directory from the location of FileController.js
+      const filePath = path.join(filesDirectory, file.path); // Construct the file path using the files directory
+
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      const categoryId = await CategoriesController.getCategoryByName(category);
+      const subCategoryId = await CategoriesController.getSubcategoryByName(category, subcategory);
+
+      const result = await saveFile(req, categoryId, subCategoryId);
+
+      res.status(200).json({ message: result.message });
+    } catch (error) {
+      console.error('Error exchanging file:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    }
+  },
 };
 
 
