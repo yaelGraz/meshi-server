@@ -1,10 +1,19 @@
 import mongoose from "mongoose";
+// import SubCategoriesModel from "./SubCategoriesModel";
 
-const CategorySchema=mongoose.Schema({
+const SubCategoriesSchema = mongoose.Schema({
     // id:Number,
+    // _id: { type: String, required: true, default: nanoid }, // Use nanoid for unique IDs
     name:String,
-    subCategories:Number
     
 })
 
-export default mongoose.model("categories",CategorySchema);
+
+const CategorySchema = mongoose.Schema({
+    name: { type: String, required: true },
+    // subCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SubCategories' }]
+    // subCategories: [{ name: String }]
+    subCategories: [SubCategoriesSchema]
+})
+
+export default mongoose.model("categories", CategorySchema);
