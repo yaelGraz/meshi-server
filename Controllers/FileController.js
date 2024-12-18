@@ -141,6 +141,7 @@ fs.unlinkSync(filePath);
   
       const file = req.file;
       const destination = `${filePath}/${guidName}.${fileType}`; // Updated destination
+      console.log("file.path",file.path)
   
       // Move the uploaded file to the destination
       fs.renameSync(file.path, destination);
