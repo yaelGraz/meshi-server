@@ -42,23 +42,19 @@ const fetchCategoryData = async (req, res, next) => {
 
 
 const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
+  destination: (req, file, cb) => {
+    console.log("Destination callback invoked");
+    console.log("Category ID:", req.categoryId);
+    console.log("Subcategory ID:", req.subcategoryId);
+  
     try {
-      console.log("req.body in multer.diskStorage", req.body);
-      console.log("req.query in multer.diskStorage", req.query);
-      console.log("req.query.category in multer.diskStorage", req.query.category);
-
-      
-      const categoryId = await CategoriesController.getCategoryByName(req.query.category);
-      const subcategoryId = await CategoriesController.getSubcategoryByName(req.query.category, req.query.subcategory);
-
-      console.log("categoryId in multer.diskStorage", categoryId);
-      console.log("subcategoryId in multer.diskStorage", subcategoryId);
-      
-      const uploadPath = `./files/${categoryId}/${subcategoryId}/`;
+      const uploadPath = `./files/${req.categoryId}/${req.subcategoryId}/`;
+      console.log("Upload Path:", uploadPath);
+  
+      fs.mkdirSync(uploadPath, { recursive: true });
       cb(null, uploadPath);
     } catch (error) {
-      console.error('Error getting category or subcategory:', error);
+      console.error('Error in destination callback:', error);
       cb(error);
     }
   },
@@ -77,7 +73,7 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage:storage });
 
 FileRouter.delete('/:guidName', FileController.deleteFile);
 
