@@ -14,6 +14,31 @@ FileRouter.get('/:fileName', FileController.filename);
 
 FileRouter.get('/:category/:subcategory/fileContent/:guidName',FileController.getFileContent) 
 //FileRouter.get('/SearchfileContent/:subcategory',FileController.searchFileContent) 
+const fetchCategoryData = async (req, res, next) => {
+  try {
+    const { category, subcategory } = req.query;
+
+    if (!category || !subcategory) {
+      return res.status(400).json({ error: 'Category or subcategory not provided' });
+    }
+
+    const categoryId = await CategoriesController.getCategoryByName(category);
+    const subcategoryId = await CategoriesController.getSubcategoryByName(category, subcategory);
+
+    if (!categoryId || !subcategoryId) {
+      return res.status(404).json({ error: 'Category or subcategory not found' });
+    }
+
+    // Attach IDs to `req`
+    req.categoryId = categoryId;
+    req.subcategoryId = subcategoryId;
+
+    next();
+  } catch (error) {
+    console.error('Error fetching category data:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
 
 
 const storage = multer.diskStorage({
@@ -53,10 +78,11 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
+
 FileRouter.delete('/:guidName', FileController.deleteFile);
 
-FileRouter.post('/upload',upload.single('file'),FileController.middlewareUpload),
-FileRouter.post('/exchange-file/:guidName', upload.single('file'), FileController.exchangeFile);
+FileRouter.post('/upload',fetchCategoryData,upload.single('file'),FileController.middlewareUpload),
+FileRouter.post('/exchange-file/:guidName',fetchCategoryData, upload.single('file'), FileController.exchangeFile);
 FileRouter.use("/:category/:subcategory", (req, res, next) => {
   const { category, subcategory } = req.params;
   if (!category || !subcategory) {
