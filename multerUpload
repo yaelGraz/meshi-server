@@ -1,0 +1,37 @@
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+
+// Configure disk storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // Fetch category and subcategory IDs from the request
+    const { categoryId, subcategoryId } = req; // These should be added to the request by a middleware
+
+    // Define the path where files should be uploaded
+    const uploadPath = path.join(__dirname, `../files/${categoryId}/${subcategoryId}/`);
+
+    // Create directories if they do not exist
+    fs.mkdirSync(uploadPath, { recursive: true });
+
+    console.log('File will be saved to:', uploadPath);
+    cb(null, uploadPath); // Set the destination path
+  },
+
+  filename: (req, file, cb) => {
+    // Generate a unique file name using GUID
+    const guidName = req.body.guidName || Date.now(); // Use current time or any unique identifier
+    const fileType = file.originalname.split('.').pop(); // Extract file extension
+
+    // Create a filename that includes the unique GUID and the file type
+    cb(null, `${guidName}.${fileType}`); // Save the file with a unique name
+  },
+});
+
+// Configure the upload limit (e.g., max 50MB file size)
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+});
+
+export default upload;

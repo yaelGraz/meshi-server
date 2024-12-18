@@ -4,6 +4,7 @@ import CategoriesController from "./CategorisController.js";
 import multer from 'multer';
 import mongoose from 'mongoose';
 import path from 'path';
+
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -106,53 +107,44 @@ fs.unlinkSync(filePath);
 
 
   fileupload: async (req, res) => {
-    try { 
+    try {
       const { category, subcategory } = req.query;
-      // console.log("req.body in fileupload",req.body)
-      // console.log("req.query in fileupload",req.query)
-      const categoryId= await CategoriesController.getCategoryByName(category)
-      const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
-      // console.log("categoryId",categoryId)
-      // console.log("subCategoryId",subCategoryId)
-
+  
+      // Check if file is present in the request
       if (!req.file || !req.file.originalname) {
         throw new Error('No file uploaded or file name not found');
       }
-      console.log("Uploaded file details:", req.file); // Log the uploaded file object
-
-      // Get current directory path
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = dirname(__filename);
-      
-      // Generate unique name for the file
+  
+      console.log('Uploaded file details:', req.file); // Log the uploaded file object
+  
+      // Fetch category and subcategory IDs from the request
+      const categoryId = req.categoryId;
+      const subcategoryId = req.subcategoryId;
+  
+      // Generate a unique GUID for the file
       const guidName = uuidv4();
-
-      // Get file type from the original file name
-
-      const fileType = req.file.originalname.split('.').pop();
-
-      const relativeFilePath = `files/${categoryId}/${subCategoryId}`;
+      const fileType = req.file.originalname.split('.').pop(); // Extract file extension
+  
+      // Define the relative file path to save the file
+      const relativeFilePath = `files/${categoryId}/${subcategoryId}`;
       const filePath = path.join(__dirname, `../${relativeFilePath}`);
       
-      // Ensure directory exists
-      if (!fs.existsSync(filePath)) {
-        fs.mkdirSync(filePath, { recursive: true });
-      }
+      // Ensure the destination directory exists
+      fs.mkdirSync(filePath, { recursive: true });
   
-      const file = req.file;
-      const destination = `${filePath}/${guidName}.${fileType}`; // Updated destination
-      console.log("file.path",file.path)
+      // Define the full destination path for the uploaded file
+      const destination = path.join(filePath, `${guidName}.${fileType}`);
   
-      // Move the uploaded file to the destination
-      fs.renameSync(file.path, destination);
+      // Multer automatically saves the file to disk (we don't need to move it manually)
+      console.log('Saving file to:', destination);
   
-      // Save file metadata to MongoDB
+      // Save the file metadata to MongoDB
       const fileData = new FileModel({
-         TYPE: fileType,
-         GUIDNAME: guidName,
-         DATE: new Date(),
-         fileName: file.filename,
-         path: `${relativeFilePath}/${guidName}.${fileType}`,  // Updated path format
+        TYPE: fileType,
+        GUIDNAME: guidName,
+        DATE: new Date(),
+        fileName: req.file.originalname,
+        path: `${relativeFilePath}/${guidName}.${fileType}`,
       });
   
       await fileData.save();
@@ -160,12 +152,9 @@ fs.unlinkSync(filePath);
       res.status(200).json({ message: 'File uploaded successfully' });
     } catch (error) {
       console.error('Error uploading file:', error);
-      console.error('Error details:', error.stack);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Internal Server Error',error });
-      }
+      res.status(500).json({ error: 'Internal Server Error' });
     }
-},
+  },
 
 
 

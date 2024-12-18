@@ -4,7 +4,7 @@ const FileRouter=express.Router();
 import multerUpload from "../multerConfig.js";
 import multer from 'multer'; 
 
-FileRouter.post('/upload', multerUpload.single('file'), FileController.fileupload);
+// FileRouter.post('/upload', multerUpload.single('file'), FileController.fileupload);
 //FileRouter.get('', FileController.getFileNames);
 
 // Route to fetch file data based on file name
@@ -29,7 +29,6 @@ const fetchCategoryData = async (req, res, next) => {
       return res.status(404).json({ error: 'Category or subcategory not found' });
     }
 
-    // Attach IDs to `req`
     req.categoryId = categoryId;
     req.subcategoryId = subcategoryId;
 
@@ -41,44 +40,45 @@ const fetchCategoryData = async (req, res, next) => {
 };
 
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    console.log("Destination callback invoked");
-    console.log("Category ID:", req.categoryId);
-    console.log("Subcategory ID:", req.subcategoryId);
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     console.log("Destination callback invoked");
+//     console.log("Category ID:", req.categoryId);
+//     console.log("Subcategory ID:", req.subcategoryId);
   
-    try {
-      const uploadPath = `./files/${req.categoryId}/${req.subcategoryId}/`;
-      console.log("Upload Path:", uploadPath);
+//     try {
+//       const uploadPath = `./files/${req.categoryId}/${req.subcategoryId}/`;
+//       console.log("Upload Path:", uploadPath);
   
-      fs.mkdirSync(uploadPath, { recursive: true });
-      cb(null, uploadPath);
-    } catch (error) {
-      console.error('Error in destination callback:', error);
-      cb(error);
-    }
-  },
+//       fs.mkdirSync(uploadPath, { recursive: true });
+//       cb(null, uploadPath);
+//     } catch (error) {
+//       console.error('Error in destination callback:', error);
+//       cb(error);
+//     }
+//   },
 
-  filename: (req, file, cb) => {
-    const guidName = req.body.guidName;
-    console.log("guidName in fileName in multer.diskStorage:",guidName)
-    const encodedFileName = file.originalname;
-    console.log("encodedFileName", encodedFileName);
+//   filename: (req, file, cb) => {
+//     const guidName = req.body.guidName;
+//     console.log("guidName in fileName in multer.diskStorage:",guidName)
+//     const encodedFileName = file.originalname;
+//     console.log("encodedFileName", encodedFileName);
 
-    // Decode the file name using iconv-lite directly to utf-8
-    const decodedFileName = iconv.decode(iconv.encode(encodedFileName, 'binary'), 'utf-8').toString();
-    console.log("decodedFileName", decodedFileName);
+//     // Decode the file name using iconv-lite directly to utf-8
+//     const decodedFileName = iconv.decode(iconv.encode(encodedFileName, 'binary'), 'utf-8').toString();
+//     console.log("decodedFileName", decodedFileName);
 
-    cb(null, decodedFileName);
-  },
-});
+//     cb(null, decodedFileName);
+//   },
+// });
 
-const upload = multer({ storage:storage });
+// const upload = multer({ storage:storage });
 
 FileRouter.delete('/:guidName', FileController.deleteFile);
 
-FileRouter.post('/upload',fetchCategoryData,upload.single('file'),FileController.middlewareUpload),
-FileRouter.post('/exchange-file/:guidName',fetchCategoryData, upload.single('file'), FileController.exchangeFile);
+FileRouter.post('/upload', fetchCategoryData, multerUpload.single('file'), FileController.fileupload);
+
+FileRouter.post('/exchange-file/:guidName',fetchCategoryData, multerUpload.single('file'), FileController.exchangeFile);
 FileRouter.use("/:category/:subcategory", (req, res, next) => {
   const { category, subcategory } = req.params;
   if (!category || !subcategory) {
