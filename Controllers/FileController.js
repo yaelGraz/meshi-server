@@ -106,53 +106,59 @@ fs.unlinkSync(filePath);
   
 
 
-  fileupload: async (req, res) => {
+   fileupload :async (req, res) => {
     try {
       const { category, subcategory } = req.query;
-  
-      // Check if file is present in the request
+      
       if (!req.file || !req.file.originalname) {
         throw new Error('No file uploaded or file name not found');
       }
+      console.log("Uploaded file details:", req.file);
   
-      console.log('Uploaded file details:', req.file); // Log the uploaded file object
-  
-      // Fetch category and subcategory IDs from the request
-      const categoryId = req.categoryId;
-      const subcategoryId = req.subcategoryId;
-  
-      // Generate a unique GUID for the file
+      // Equivalent to __dirname in ES Modules
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = dirname(__filename);
+      
+      // Generate unique name for the file
       const guidName = uuidv4();
-      const fileType = req.file.originalname.split('.').pop(); // Extract file extension
-  
-      // Define the relative file path to save the file
-      const relativeFilePath = `files/${categoryId}/${subcategoryId}`;
+      
+      // Get file type from the original file name
+      const fileType = req.file.originalname.split('.').pop();
+      
+      // Set the path where the file will be stored
+      const relativeFilePath = `files/${req.categoryId}/${req.subcategoryId}`;
       const filePath = path.join(__dirname, `../${relativeFilePath}`);
       
-      // Ensure the destination directory exists
-      fs.mkdirSync(filePath, { recursive: true });
+      // Ensure directory exists
+      if (!fs.existsSync(filePath)) {
+        fs.mkdirSync(filePath, { recursive: true });
+      }
   
-      // Define the full destination path for the uploaded file
-      const destination = path.join(filePath, `${guidName}.${fileType}`);
+      // Destination path where the file will be saved
+      const destination = `${filePath}/${guidName}.${fileType}`;
+      console.log("file.path", req.file.path);
   
-      // Multer automatically saves the file to disk (we don't need to move it manually)
-      console.log('Saving file to:', destination);
-  
-      // Save the file metadata to MongoDB
+      // Move the uploaded file to the destination
+      fs.renameSync(req.file.path, destination);
+      
+      // Save file metadata to MongoDB
       const fileData = new FileModel({
         TYPE: fileType,
         GUIDNAME: guidName,
         DATE: new Date(),
-        fileName: req.file.originalname,
-        path: `${relativeFilePath}/${guidName}.${fileType}`,
+        fileName: req.file.filename,
+        path: `${relativeFilePath}/${guidName}.${fileType}`,  // Updated path format
       });
   
       await fileData.save();
-  
+      
       res.status(200).json({ message: 'File uploaded successfully' });
     } catch (error) {
       console.error('Error uploading file:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+      console.error('Error details:', error.stack);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal Server Error', error });
+      }
     }
   },
 
