@@ -7,12 +7,19 @@ import UserRouter from './Routers/UserRouter.js';
 import FileRouter from './Routers/FileRouter.js';
 import FileController from './Controllers/FileController.js';
 import multer from 'multer';
+import dotenv from 'dotenv';
+dotenv.config();
 
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseKey =process.env.SUPABASE_KEY
+const supabase = createClient(supabaseUrl, supabaseKey)
 connectDB();
 
 const app = express();
 const port = process.env.PORT || 3000;
-
+app.locals.supabase = supabase;
 app.use(cors());
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true, parameterLimit: 50000 }));
