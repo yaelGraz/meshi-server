@@ -16,7 +16,7 @@ import { dirname } from 'path';
 
 FileRouter.get('/:category/:subcategory/fileContent/:guidName',FileController.getFileContent) 
 FileRouter.get('/SearchfileContent/:subcategory',FileController.searchFileContent) 
-router.get('/files/:category/:subcategory', FileController.filenames);
+FileRouter.get('/files/:category/:subcategory', FileController.filenames);
 // const storage = multer.diskStorage({
 //   destination: async (req, file, cb) => {
 //     try {
