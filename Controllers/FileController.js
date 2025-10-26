@@ -496,6 +496,74 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 
 const FileController = {
+  searchFileContent: async (req, res) => {
+  try {
+    const { subcategory } = req.params;
+
+    const categories = await CategoriesController.fetchCategories();
+    const category = categories.find(category =>
+      category.subcategories.some(sub => sub.name === subcategory)
+    );
+
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    const categoryId = category._id;
+    const subcategoryId = await CategoriesController.getSubcategoryByName(category.name, subcategory);
+
+    const fileNames = FileController.filename(category.name, subcategory.name);
+
+    // const GUIDNAME = await FileController.getGuidNameByFileName(req.params.fileName);
+    const fileType = await FileController.getFileTypeByGuidName(fileNames[0]?.guidName);
+
+    const relativePath = `files/${categoryId}/${subcategoryId}/${fileNames[0]?.guidName}.${fileType}`;
+    console.log("relativePath:", relativePath);
+
+    const pathToCheck = path.resolve(relativePath);
+    console.log("pathToCheck:", pathToCheck);
+
+    if (!fs.existsSync(pathToCheck)) {
+      console.log("File does not exist on server!!!");
+      return res.status(404).json({ error: 'File not found on server' });
+    }
+
+    const fileData = await FileModel.findOne({ path: relativePath });
+    if (!fileData) {
+      console.log("File not found in database!!!");
+      return res.status(404).json({ error: 'File not found in database' });
+    }
+
+    res.sendFile(pathToCheck);
+  } catch (error) {
+    console.error('Error fetching file content:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+},
+
+exchangeFile: async (req, res) => {
+  try {
+    const { guidName } = req.params;
+    const { category, subcategory } = req.query;
+
+    // Find the file by GUIDNAME
+    const file = await FileModel.findOne({ GUIDNAME: guidName });
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // כאן אפשר להוסיף את הקוד להחלפת קובץ (upload חדש או עדכון)
+    // לדוגמה:
+    // const newFilePath = `files/${category}/${subcategory}/${guidName}`;
+    // await FileController.replaceFile(file.path, newFilePath);
+
+    res.status(200).json({ message: 'File exchange successful' });
+  } catch (error) {
+    console.error('Error exchanging file:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+},
+
   // העלאת קובץ ל־Supabase
   fileupload: async (req, res) => {
     try {
