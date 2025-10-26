@@ -496,6 +496,40 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 
 const FileController = {
+middlewareUpload:async(req,res)=>{ 
+    try {
+    // Attach additional parameters to the req object
+    console.log("req.body:", req.body);
+    console.log("Category:", req.body.category);
+    console.log("Subcategory:", req.body.subcategory);
+    console.log("Uploaded file:", req.file);
+    // Call the file upload function from the controller
+     FileController.fileupload(req, res);
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  }
+},
+
+getGuidNameByFileName: async (fileName) => {
+  try {
+
+    // Find the file in the database by file name
+    const fileData = await FileModel.findOne({ fileName: fileName });
+
+    // If the file data is found, return the GUIDNAME
+    if (fileData && fileData.GUIDNAME) {
+      return fileData.GUIDNAME;
+    } else {
+      throw new Error('File not found');
+    }
+  } catch (error) {
+    console.error('Error fetching GUIDNAME by file name:', error);
+    throw error;
+  }
+},
   searchFileContent: async (req, res) => {
   try {
     const { subcategory } = req.params;
@@ -666,10 +700,134 @@ exchangeFile: async (req, res) => {
     }
   },
 
-  getFileTypeByGuidName: async (guidName) => {
-    const file = await FileModel.findOne({ GUIDNAME: guidName });
-    return file?.TYPE || null;
+   getFileTypeByGuidName: async (guidName) => {
+  try {
+    // Find the file in the database by file name
+    const fileData = await FileModel.findOne({ GUIDNAME: guidName });
+
+    // If the file data is found, return the GUIDNAME
+    if (fileData && fileData.TYPE) {
+      return fileData.TYPE;
+    } else {
+      throw new Error('File not found');
+    }
+  } catch (error) {
+    console.error('Error fetching GUIDNAME by file name:', error);
+    throw error;
   }
+},
+  
+  filenames: async (req, res) => {
+    try {
+
+      const { category, subcategory } = req.params;
+      console.log("req.params",req.params)
+
+      const categoryId= await CategoriesController.getCategoryByName(category)
+
+      const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
+                                                                
+     
+      const pathPrefix = `files/${categoryId}/${subCategoryId}`;
+      //const pathPrefix = `files\\`;
+      console.log(" pathPrefix ", pathPrefix )
+      const files = await FileModel.find({ path: { $regex: `^${pathPrefix}` } }); 
+      const fileNames = files.map(file => ({ 
+        fileName: file.fileName, 
+        guidName: file.GUIDNAME
+      }));
+      console.log(" fileNames", fileNames)
+      res.json(fileNames);
+    } catch (error) {
+      console.error('Error fetching file names:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  },
+
+  fileupload: async (req, res) => {
+    try { 
+      const bucket = process.env.SUPABASE_BUCKET;
+      const { category, subcategory } = req.query;
+      // console.log("req.body in fileupload",req.body)
+      // console.log("req.query in fileupload",req.query)
+      const categoryId= await CategoriesController.getCategoryByName(category)
+      const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
+      // console.log("categoryId",categoryId)
+      // console.log("subCategoryId",subCategoryId)
+
+      if (!req.file || !req.file.originalname) {
+        throw new Error('No file uploaded or file name not found');
+      }
+      // Get current directory path
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = dirname(__filename);
+      
+      // Generate unique name for the file
+      const guidName = uuidv4();
+
+      // Get file type from the original file name
+
+      const fileType = req.file.originalname.split('.').pop();
+
+      const relativeFilePath = `files/${categoryId}/${subCategoryId}`;
+      const filePath = path.join(__dirname, `../${relativeFilePath}`);
+      
+      // Ensure directory exists
+      if (!fs.existsSync(filePath)) {
+        fs.mkdirSync(filePath, { recursive: true });
+      }
+  
+      const file = req.file;
+      const destination = `${filePath}/${guidName}.${fileType}`; // Updated destination
+  
+      // Move the uploaded file to the destination
+      fs.renameSync(file.path, destination);
+  
+      // Save file metadata to MongoDB
+      const fileData = new FileModel({
+         TYPE: fileType,
+         GUIDNAME: guidName,
+         DATE: new Date(),
+         fileName: file.filename,
+         path: `${relativeFilePath}/${guidName}.${fileType}`,  // Updated path format
+      });
+  
+      await fileData.save();
+  
+      res.status(200).json({ message: 'File uploaded successfully' });
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    }
+},
+    filenames: async (req, res) => {
+    try {
+
+      const { category, subcategory } = req.params;
+      console.log("req.params",req.params)
+
+      const categoryId= await CategoriesController.getCategoryByName(category)
+
+      const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
+                                                                
+     
+      const pathPrefix = `files/${categoryId}/${subCategoryId}`;
+      //const pathPrefix = `files\\`;
+      console.log(" pathPrefix ", pathPrefix )
+      const files = await FileModel.find({ path: { $regex: `^${pathPrefix}` } }); 
+      const fileNames = files.map(file => ({ 
+        fileName: file.fileName, 
+        guidName: file.GUIDNAME
+      }));
+      console.log(" fileNames", fileNames)
+      res.json(fileNames);
+    } catch (error) {
+      console.error('Error fetching file names:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  },
 };
 
 // הגדרת multer לזיכרון (לא לשמירה על הדיסק)
