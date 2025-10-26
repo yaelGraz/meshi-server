@@ -727,16 +727,19 @@ exchangeFile: async (req, res) => {
 
       const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
                                                                 
-     
+     console.log("categoryId", categoryId); // <--- לוג נוסף
+    console.log("subCategoryId", subCategoryId); //
       const pathPrefix = `files/${categoryId}/${subCategoryId}`;
       //const pathPrefix = `files\\`;
       console.log(" pathPrefix ", pathPrefix )
-      const files = await FileModel.find({ path: { $regex: `^${pathPrefix}` } }); 
+      const files = await FileModel.find({ path: { $regex: `^${pathPrefix}` } });
+          console.log("files from DB", files); 
       const fileNames = files.map(file => ({ 
         fileName: file.fileName, 
         guidName: file.GUIDNAME
       }));
-      console.log(" fileNames", fileNames)
+          console.log("fileNames", fileNames); // <--- לוג סופי
+
       res.json(fileNames);
     } catch (error) {
       console.error('Error fetching file names:', error);
