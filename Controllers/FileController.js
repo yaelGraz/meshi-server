@@ -717,35 +717,35 @@ exchangeFile: async (req, res) => {
   }
 },
   
-  filenames: async (req, res) => {
-    try {
+  // filenames: async (req, res) => {
+  //   try {
 
-      const { category, subcategory } = req.params;
-      console.log("req.params",req.params)
+  //     const { category, subcategory } = req.params;
+  //     console.log("req.params",req.params)
 
-      const categoryId= await CategoriesController.getCategoryByName(category)
+  //     const categoryId= await CategoriesController.getCategoryByName(category)
 
-      const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
+  //     const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
                                                                 
-     console.log("categoryId", categoryId); // <--- לוג נוסף
-    console.log("subCategoryId", subCategoryId); //
-      const pathPrefix = `files/${categoryId}/${subCategoryId}`;
-      //const pathPrefix = `files\\`;
-      console.log(" pathPrefix ", pathPrefix )
-      const files = await FileModel.find({ path: { $regex: `^${pathPrefix}` } });
-          console.log("files from DB", files); 
-      const fileNames = files.map(file => ({ 
-        fileName: file.fileName, 
-        guidName: file.GUIDNAME
-      }));
-          console.log("fileNames", fileNames); // <--- לוג סופי
+  //    console.log("categoryId", categoryId); // <--- לוג נוסף
+  //   console.log("subCategoryId", subCategoryId); //
+  //     const pathPrefix = `files/${categoryId}/${subCategoryId}`;
+  //     //const pathPrefix = `files\\`;
+  //     console.log(" pathPrefix ", pathPrefix )
+  //     const files = await FileModel.find({ path: { $regex: `^${pathPrefix}` } });
+  //         console.log("files from DB", files); 
+  //     const fileNames = files.map(file => ({ 
+  //       fileName: file.fileName, 
+  //       guidName: file.GUIDNAME
+  //     }));
+  //         console.log("fileNames", fileNames); // <--- לוג סופי
 
-      res.json(fileNames);
-    } catch (error) {
-      console.error('Error fetching file names:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
+  //     res.json(fileNames);
+  //   } catch (error) {
+  //     console.error('Error fetching file names:', error);
+  //     res.status(500).json({ error: 'Internal Server Error' });
+  //   }
+  // },
 
   fileupload: async (req, res) => {
     try { 
