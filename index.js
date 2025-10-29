@@ -20,17 +20,13 @@ connectDB();
 const app = express();
 const port = process.env.PORT || 3000;
 app.locals.supabase = supabase;
-app.use(cors());
+//app.use(cors());
 app.use(cors({
-  origin: (origin, cb) => {
-    // לאפשר גם כלים ללא Origin (Postman) וגם את הלקוח
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error("Not allowed by CORS"));
-  },
+  origin: true,                           // ← מאפשר הכל
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,         // אם משתמשת בקוקיז/קרדנצ'יאלס
-  optionsSuccessStatus: 204, // שומר על 204 כפי שרואים בלוג
+  credentials: true,
+  optionsSuccessStatus: 204,
 }));
 
 // חשוב: לאפשר preflight לכל הנתיבים
