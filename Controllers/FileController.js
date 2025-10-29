@@ -510,10 +510,22 @@ const BUCKET = process.env.SUPABASE_BUCKET || "uploads";
 
 // נתיב לוגי בבאקט: category/subcategory/guidName
 function buildPath({ category, subcategory, guidName }) {
-  const cat = safeSegment(category || 'uncategorized');
-  const sub = safeSegment(subcategory || 'general');
+  // ניקוי תווים בעייתיים (כולל רווחים ותווי unicode)
+  const cleanSegment = (str) => {
+    return String(str || '')
+      .normalize('NFKD')               // מפרק ניקוד
+      .replace(/[^\w\s.-]/g, '')       // מסיר תווים לא חוקיים
+      .trim()
+      .replace(/\s+/g, '_')            // רווחים -> _
+      .replace(/_+/g, '_')             // רצפי _ -> אחד
+      .toLowerCase() || 'uncategorized';
+  };
+
+  const cat = cleanSegment(category);
+  const sub = cleanSegment(subcategory);
   return `${cat}/${sub}/${guidName}`;
 }
+
 
 // הוסיפי מתחת:
 // אפשרות A – קידוד URL לכל מקטע (שומר עברית כ-%D7...):
