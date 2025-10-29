@@ -510,10 +510,18 @@ const BUCKET = process.env.SUPABASE_BUCKET || "uploads";
 
 // נתיב לוגי בבאקט: category/subcategory/guidName
 function buildPath({ category, subcategory, guidName }) {
-  const cat = encodeURIComponent(category || "uncategorized");
-  const sub = encodeURIComponent(subcategory || "general");
+  const cat = safeSegment(category || 'uncategorized');
+  const sub = safeSegment(subcategory || 'general');
   return `${cat}/${sub}/${guidName}`;
 }
+
+// הוסיפי מתחת:
+// אפשרות A – קידוד URL לכל מקטע (שומר עברית כ-%D7...):
+function safeSegment(s) {
+  return encodeURIComponent(String(s).trim().replace(/\//g, '-'))
+    .replace(/%20/g, '_'); // רווחים -> _
+}
+
 
 // --------- קריאות עיקריות ---------
 
