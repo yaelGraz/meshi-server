@@ -490,351 +490,255 @@
 // export default FileController;
 
 // --------------------
+import crypto from "crypto";
 import FileModel from "../Models/FileModel.js";
-import CategoriesController from "./CategorisController.js";
-import multer from 'multer';
-import { v4 as uuidv4 } from 'uuid';
+import { createClient } from "@supabase/supabase-js";
 
-const FileController = {
-middlewareUpload:async(req,res)=>{ 
-    try {
-    // Attach additional parameters to the req object
-    console.log("req.body:", req.body);
-    console.log("Category:", req.body.category);
-    console.log("Subcategory:", req.body.subcategory);
-    console.log("Uploaded file:", req.file);
-    // Call the file upload function from the controller
-     FileController.fileupload(req, res);
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  }
-},
+/**
+ * נקודת אמת: כל הקבצים נשמרים בבאקט Supabase (ללא FS מקומי).
+ * ניגשים ל-supabase דרך app.locals.supabase (כפי שהגדרת ב-index.js),
+ * ואם לא הוזרק – ניצור לקוח מהמפתחות בסביבה.
+ */
 
-getGuidNameByFileName: async (fileName) => {
+function getSupabase(req) {
+  return req.app?.locals?.supabase
+    ? req.app.locals.supabase
+    : createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+}
+
+const BUCKET = process.env.SUPABASE_BUCKET || "uploads";
+
+// נתיב לוגי בבאקט: category/subcategory/guidName
+function buildPath({ category, subcategory, guidName }) {
+  const cat = encodeURIComponent(category || "uncategorized");
+  const sub = encodeURIComponent(subcategory || "general");
+  return `${cat}/${sub}/${guidName}`;
+}
+
+// --------- קריאות עיקריות ---------
+
+/**
+ * GET /files/:category/:subcategory
+ * מחזיר רשימת קבצים לפי קטגוריה/תת־קטגוריה מתוך MongoDB
+ */
+async function list(req, res) {
   try {
+    const category = String(req.params.category || "").trim();
+    const subcategory = String(req.params.subcategory || "").trim();
 
-    // Find the file in the database by file name
-    const fileData = await FileModel.findOne({ fileName: fileName });
+    const rows = await FileModel.find({ category, subcategory })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    // If the file data is found, return the GUIDNAME
-    if (fileData && fileData.GUIDNAME) {
-      return fileData.GUIDNAME;
-    } else {
-      throw new Error('File not found');
-    }
-  } catch (error) {
-    console.error('Error fetching GUIDNAME by file name:', error);
-    throw error;
+    // נשמור תאימות לשדות שה-UI שלך מצפה (id/_id, url, originalName, וכו')
+    const files = rows.map((f) => ({
+      id: f._id?.toString(),
+      _id: f._id,
+      fileName: f.fileName,
+      guidName: f.guidName,
+      originalName: f.originalName,
+      url: f.url,               // אם הבאקט פרטי – אפשר להפיק Signed URL בצד הלקוח/שרת
+      mimetype: f.mimetype,
+      size: f.size,
+      category: f.category,
+      subcategory: f.subcategory,
+      createdAt: f.createdAt,
+    }));
+
+    res.json(files);
+  } catch (e) {
+    console.error("list error:", e);
+    res.status(400).json({ message: e.message });
   }
-},
-  searchFileContent: async (req, res) => {
+}
+
+/**
+ * POST /files/upload?category=...&subcategory=...
+ * body: multipart/form-data עם field בשם 'file'
+ */
+async function upload(req, res) {
   try {
-    const { subcategory } = req.params;
+    const supabase = getSupabase(req);
+    const category = String(req.query.category || "").trim();
+    const subcategory = String(req.query.subcategory || "").trim();
 
-    const categories = await CategoriesController.fetchCategories();
-    const category = categories.find(category =>
-      category.subcategories.some(sub => sub.name === subcategory)
-    );
+    const file = req.file || (req.files && req.files[0]);
+    if (!file) return res.status(400).json({ error: "file is required" });
 
-    if (!category) {
-      return res.status(404).json({ error: 'Category not found' });
-    }
+    // מייצרים guid יציב בשביל קישור עתידי/החלפה
+    const ext = (file.originalname?.split(".").pop() || "").toLowerCase();
+    const guidName = `${Date.now()}_${crypto.randomBytes(6).toString("hex")}.${ext || "bin"}`;
+    const path = buildPath({ category, subcategory, guidName });
 
-    const categoryId = category._id;
-    const subcategoryId = await CategoriesController.getSubcategoryByName(category.name, subcategory);
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, file.buffer, { contentType: file.mimetype, upsert: false });
 
-    const fileNames = FileController.filename(category.name, subcategory.name);
+    if (error) throw new Error(error.message || "supabase upload failed");
 
-    // const GUIDNAME = await FileController.getGuidNameByFileName(req.params.fileName);
-    const fileType = await FileController.getFileTypeByGuidName(fileNames[0]?.guidName);
+    // public URL (אם הבאקט ציבורי), אחרת אפשר להשאיר null ולהפיק signed כשצריך
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
 
-    const relativePath = `files/${categoryId}/${subcategoryId}/${fileNames[0]?.guidName}.${fileType}`;
-    console.log("relativePath:", relativePath);
+    const saved = await FileModel.create({
+      fileName: file.originalname,
+      guidName,
+      originalName: file.originalname,
+      url: pub?.publicUrl || null,
+      path,
+      mimetype: file.mimetype,
+      size: file.size,
+      category,
+      subcategory,
+    });
 
-    const pathToCheck = path.resolve(relativePath);
-    console.log("pathToCheck:", pathToCheck);
-
-    if (!fs.existsSync(pathToCheck)) {
-      console.log("File does not exist on server!!!");
-      return res.status(404).json({ error: 'File not found on server' });
-    }
-
-    const fileData = await FileModel.findOne({ path: relativePath });
-    if (!fileData) {
-      console.log("File not found in database!!!");
-      return res.status(404).json({ error: 'File not found in database' });
-    }
-
-    res.sendFile(pathToCheck);
-  } catch (error) {
-    console.error('Error fetching file content:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(201).json({
+      ok: true,
+      file: {
+        id: saved._id?.toString(),
+        guidName: saved.guidName,
+        originalName: saved.originalName,
+        url: saved.url,
+        category: saved.category,
+        subcategory: saved.subcategory,
+        mimetype: saved.mimetype,
+        size: saved.size,
+      },
+    });
+  } catch (e) {
+    console.error("upload error:", e);
+    res.status(400).json({ message: e.message });
   }
-},
+}
 
-exchangeFile: async (req, res) => {
+/**
+ * GET /files/:category/:subcategory/fileContent/:guidName
+ * מחזיר את תוכן הקובץ (stream) מהבאקט לפי guidName
+ */
+async function fileContent(req, res) {
   try {
-    const { guidName } = req.params;
-    const { category, subcategory } = req.query;
+    const supabase = getSupabase(req);
+    const { category, subcategory, guidName } = {
+      category: req.params.category,
+      subcategory: req.params.subcategory,
+      guidName: req.params.guidName,
+    };
 
-    // Find the file by GUIDNAME
-    const file = await FileModel.findOne({ GUIDNAME: guidName });
-    if (!file) {
-      return res.status(404).json({ error: 'File not found' });
-    }
+    // מאתרים את הרשומה כדי לקבל path ו-mimetype
+    const doc = await FileModel.findOne({ category, subcategory, guidName }).lean();
+    if (!doc) return res.status(404).json({ message: "File not found" });
 
-    // כאן אפשר להוסיף את הקוד להחלפת קובץ (upload חדש או עדכון)
-    // לדוגמה:
-    // const newFilePath = `files/${category}/${subcategory}/${guidName}`;
-    // await FileController.replaceFile(file.path, newFilePath);
+    const { data, error } = await supabase.storage.from(BUCKET).download(doc.path);
+    if (error) throw new Error(error.message || "supabase download failed");
 
-    res.status(200).json({ message: 'File exchange successful' });
-  } catch (error) {
-    console.error('Error exchanging file:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.setHeader("Content-Type", doc.mimetype || "application/octet-stream");
+    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(doc.originalName)}"`);
+    const buf = await data.arrayBuffer();
+    res.send(Buffer.from(buf));
+  } catch (e) {
+    console.error("fileContent error:", e);
+    res.status(400).json({ message: e.message });
   }
-},
+}
 
-  // העלאת קובץ ל־Supabase
-  fileupload: async (req, res) => {
-    try {
-      const supabase = req.app.locals.supabase;
-      const bucket = process.env.SUPABASE_BUCKET;
-      const { category, subcategory } = req.query;
+/**
+ * POST /files/exchange-file/:guidName?category=...&subcategory=...
+ * מחליף תוכן קיים (אותו guidName/אותו path) – upsert: true
+ */
+async function exchangeFile(req, res) {
+  try {
+    const supabase = getSupabase(req);
+    const category = String(req.query.category || "").trim();
+    const subcategory = String(req.query.subcategory || "").trim();
+    const guidName = String(req.params.guidName || "").trim();
 
-      if (!req.file || !req.file.originalname) {
-        throw new Error('No file uploaded');
-      }
+    const file = req.file || (req.files && req.files[0]);
+    if (!file) return res.status(400).json({ error: "file is required" });
 
-      const categoryId = await CategoriesController.getCategoryByName(category);
-      const subCategoryId = await CategoriesController.getSubcategoryByName(category, subcategory);
+    // מאתרים את המסמך כדי לקבל path. אם לא קיים – ניצור path חדש תואם GUID
+    let doc = await FileModel.findOne({ category, subcategory, guidName });
+    const path = doc?.path || buildPath({ category, subcategory, guidName });
 
-      // יצירת שם ייחודי לקובץ
-      const guidName = uuidv4();
-      const fileType = req.file.originalname.split('.').pop();
-      const filePath = `${categoryId}/${subCategoryId}/${guidName}.${fileType}`;
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, file.buffer, { contentType: file.mimetype, upsert: true });
 
-      console.log('Uploading to Supabase:', filePath);
+    if (error) throw new Error(error.message || "supabase replace failed");
 
-      // העלאה ל־Supabase
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, req.file.buffer, {
-          contentType: req.file.mimetype,
-          upsert: false,
-        });
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
 
-      if (error) {
-        console.error('Supabase upload error:', error);
-        throw error;
-      }
-
-      // שמירה במסד הנתונים
-      const fileData = new FileModel({
-        TYPE: fileType,
-        GUIDNAME: guidName,
-        DATE: new Date(),
-        fileName: req.file.originalname,
-        path: filePath,
+    if (!doc) {
+      // אם לא קיימת רשומה – ניצור חדשה
+      doc = await FileModel.create({
+        fileName: file.originalname,
+        guidName,
+        originalName: file.originalname,
+        url: pub?.publicUrl || null,
+        path,
+        mimetype: file.mimetype,
+        size: file.size,
+        category,
+        subcategory,
       });
-
-      await fileData.save();
-
-      res.status(200).json({ message: 'File uploaded to Supabase successfully', path: filePath });
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Internal Server Error' });
-      }
-    }
-  },
-
-  // הורדת קובץ מ־Supabase
-  getFileContent: async (req, res) => {
-    try {
-      const supabase = req.app.locals.supabase;
-      const bucket = process.env.SUPABASE_BUCKET;
-      const { guidName, category, subcategory } = req.params;
-
-      const fileType = await FileController.getFileTypeByGuidName(guidName);
-      const categoryId = await CategoriesController.getCategoryByName(category);
-      const subcategoryId = await CategoriesController.getSubcategoryByName(category, subcategory);
-
-      const path = `${categoryId}/${subcategoryId}/${guidName}.${fileType}`;
-
-      const { data, error } = await supabase.storage.from(bucket).download(path);
-      if (error) {
-        console.error('Error downloading from Supabase:', error);
-        return res.status(404).json({ error: 'File not found' });
-      }
-
-      res.setHeader('Content-Type', data.type);
-      res.send(Buffer.from(await data.arrayBuffer()));
-    } catch (error) {
-      console.error('Error fetching file:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
-
-  deleteFile: async (req, res) => {
-    try {
-      const supabase = req.app.locals.supabase;
-      const bucket = process.env.SUPABASE_BUCKET;
-      const { guidName } = req.params;
-
-      const file = await FileModel.findOne({ GUIDNAME: guidName });
-      if (!file) return res.status(404).json({ error: 'File not found' });
-
-      const { error } = await supabase.storage.from(bucket).remove([file.path]);
-      if (error) throw error;
-
-      await FileModel.deleteOne({ GUIDNAME: guidName });
-
-      res.json({ message: 'File deleted successfully from Supabase' });
-    } catch (error) {
-      console.error('Error deleting file:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
-
-   getFileTypeByGuidName: async (guidName) => {
-  try {
-    // Find the file in the database by file name
-    const fileData = await FileModel.findOne({ GUIDNAME: guidName });
-
-    // If the file data is found, return the GUIDNAME
-    if (fileData && fileData.TYPE) {
-      return fileData.TYPE;
     } else {
-      throw new Error('File not found');
+      // עדכון מטא־דאטה
+      doc.fileName = file.originalname;
+      doc.originalName = file.originalname;
+      doc.url = pub?.publicUrl || doc.url;
+      doc.mimetype = file.mimetype;
+      doc.size = file.size;
+      await doc.save();
     }
-  } catch (error) {
-    console.error('Error fetching GUIDNAME by file name:', error);
-    throw error;
+
+    res.json({
+      ok: true,
+      file: {
+        id: doc._id?.toString(),
+        guidName: doc.guidName,
+        originalName: doc.originalName,
+        url: doc.url,
+        mimetype: doc.mimetype,
+        size: doc.size,
+        category: doc.category,
+        subcategory: doc.subcategory,
+      },
+    });
+  } catch (e) {
+    console.error("exchangeFile error:", e);
+    res.status(400).json({ message: e.message });
   }
-},
-  
+}
 
-  //   try {
+/**
+ * DELETE /files/:id
+ * מוחק את הרשומה ב-DB ואת האובייקט בבאקט
+ */
+async function remove(req, res) {
+  try {
+    const supabase = getSupabase(req);
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ message: "id is required" });
 
-  //     const { category, subcategory } = req.params;
-  //     console.log("req.params",req.params)
+    const doc = await FileModel.findByIdAndDelete(id).lean();
+    if (!doc) return res.status(404).json({ message: "File not found" });
 
-  //     const categoryId= await CategoriesController.getCategoryByName(category)
-
-  //     const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
-                                                                
-  //    console.log("categoryId", categoryId); // <--- לוג נוסף
-  //   console.log("subCategoryId", subCategoryId); //
-  //     const pathPrefix = `files/${categoryId}/${subCategoryId}`;
-  //     //const pathPrefix = `files\\`;
-  //     console.log(" pathPrefix ", pathPrefix )
-  //     const files = await FileModel.find({ path: { $regex: `^${pathPrefix}` } });
-  //         console.log("files from DB", files); 
-  //     const fileNames = files.map(file => ({ 
-  //       fileName: file.fileName, 
-  //       guidName: file.GUIDNAME
-  //     }));
-  //         console.log("fileNames", fileNames); // <--- לוג סופי
-
-  //     res.json(fileNames);
-  //   } catch (error) {
-  //     console.error('Error fetching file names:', error);
-  //     res.status(500).json({ error: 'Internal Server Error' });
-  //   }
-  // },
-
-  fileupload: async (req, res) => {
-    try { 
-      const bucket = process.env.SUPABASE_BUCKET;
-      const { category, subcategory } = req.query;
-      // console.log("req.body in fileupload",req.body)
-      // console.log("req.query in fileupload",req.query)
-      const categoryId= await CategoriesController.getCategoryByName(category)
-      const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
-      // console.log("categoryId",categoryId)
-      // console.log("subCategoryId",subCategoryId)
-
-      if (!req.file || !req.file.originalname) {
-        throw new Error('No file uploaded or file name not found');
-      }
-      // Get current directory path
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = dirname(__filename);
-      
-      // Generate unique name for the file
-      const guidName = uuidv4();
-
-      // Get file type from the original file name
-
-      const fileType = req.file.originalname.split('.').pop();
-
-      const relativeFilePath = `files/${categoryId}/${subCategoryId}`;
-      const filePath = path.join(__dirname, `../${relativeFilePath}`);
-      
-      // Ensure directory exists
-      if (!fs.existsSync(filePath)) {
-        fs.mkdirSync(filePath, { recursive: true });
-      }
-  
-      const file = req.file;
-      const destination = `${filePath}/${guidName}.${fileType}`; // Updated destination
-  
-      // Move the uploaded file to the destination
-      fs.renameSync(file.path, destination);
-  
-      // Save file metadata to MongoDB
-      const fileData = new FileModel({
-         TYPE: fileType,
-         GUIDNAME: guidName,
-         DATE: new Date(),
-         fileName: file.filename,
-         path: `${relativeFilePath}/${guidName}.${fileType}`,  // Updated path format
-      });
-  
-      await fileData.save();
-  
-      res.status(200).json({ message: 'File uploaded successfully' });
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Internal Server Error' });
-      }
+    // מוחקים את האובייקט מהבאקט
+    const { error } = await supabase.storage.from(BUCKET).remove([doc.path]);
+    if (error) {
+      // לא נשבור אם המחיקה בבאקט נכשלה – מדווחים אבל לא מחזירים 500
+      console.warn("supabase remove warning:", error.message || error);
     }
-},
-    filenames: async (req, res) => {
-    try {
 
-      const { category, subcategory } = req.params;
-      console.log("req.params",req.params)
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("remove error:", e);
+    res.status(400).json({ message: e.message });
+  }
+}
 
-      const categoryId= await CategoriesController.getCategoryByName(category)
-
-      const subCategoryId= await CategoriesController.getSubcategoryByName(category,subcategory)
-                                                                
-     
-      const pathPrefix = `files/${categoryId}/${subCategoryId}`;
-      //const pathPrefix = `files\\`;
-      console.log(" pathPrefix ", pathPrefix )
-      const files = await FileModel.find({ path: { $regex: `^${pathPrefix}` } }); 
-      const fileNames = files.map(file => ({ 
-        fileName: file.fileName, 
-        guidName: file.GUIDNAME
-      }));
-      console.log(" fileNames", fileNames)
-      res.json(fileNames);
-    } catch (error) {
-      console.error('Error fetching file names:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
+export default {
+  list,
+  upload,
+  fileContent,
+  exchangeFile,
+  remove,
 };
-
-// הגדרת multer לזיכרון (לא לשמירה על הדיסק)
-
-const storage = multer.memoryStorage();
-export const upload = multer({ storage });
-export default FileController;

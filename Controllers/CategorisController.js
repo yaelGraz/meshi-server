@@ -1,260 +1,140 @@
-import fs from 'fs';
-import path from 'path';
+import mongoose from "mongoose";
 import CategoriesModel from "../Models/CategoriesModel.js";
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-import SubCategoryModel from "../Models/SubCategoryModel.js";
-import mongoose from 'mongoose';
-import { Console } from 'console';
 
-//try
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+/**
+ * עוזר: מנרמל מערך תתי־קטגוריות שהגיע מהלקוח (מחרוזות/אובייקטים) למבנה
+ * [{ _id, name }] – שומר _id קיים אם נשלח, יוצר חדש אם לא.
+ */
+function normalizeSubCategories(input) {
+  if (!Array.isArray(input)) return [];
+  return input
+    .filter(Boolean)
+    .map((s) => {
+      if (typeof s === "string") {
+        return { _id: new mongoose.Types.ObjectId(), name: s };
+      }
+      const name = (s?.name || "").trim();
+      if (!name) return null;
+      // אם הגיע id מהלקוח – נשמר אותו כ-_id; אחרת נייצר חדש
+      if (s?.id && mongoose.Types.ObjectId.isValid(s.id)) {
+        return { _id: new mongoose.Types.ObjectId(s.id), name };
+      }
+      if (s?._id && mongoose.Types.ObjectId.isValid(s._id)) {
+        return { _id: new mongoose.Types.ObjectId(s._id), name };
+      }
+      return { _id: new mongoose.Types.ObjectId(), name };
+    })
+    .filter(Boolean);
+}
 
 const CategoriesController = {
+  // שימוש פנימי
   fetchCategories: async () => {
-    try {
-      const categories = await CategoriesModel.find({});
-      return categories;
-    } catch (e) {
-      throw new Error(`Error fetching categories: ${e.message}`);
-    }
+    const categories = await CategoriesModel.find({}).lean();
+    return categories;
   },
 
+  // GET /categories
   getList: async (req, res) => {
     try {
       const categories = await CategoriesController.fetchCategories();
-      res.send({ categories });
+      return res.status(200).send({ categories });
     } catch (e) {
-      res.status(400).json({ message: e.message });
+      return res.status(400).json({ message: e.message });
     }
   },
 
-    getCategoryByName: async (categoryName) => {
-      try {
-    
-        const category = await CategoriesModel.findOne({ name: categoryName });
-        return category ? category._id : null;
-      } catch (error) {
-        console.error('Error fetching category by name:', error);
-        throw error;
+  // GET /categories/:subcategoryName
+  getCategoryBySubcategory: async (req, res) => {
+    try {
+      const subcategoryName = String(req.params.subcategoryName || "").trim();
+      if (!subcategoryName) {
+        return res.status(400).json({ error: "subcategoryName is required" });
       }
-    },
-  
-    getSubcategoryByName: async (categoryName, subcategoryName) => {
-      try {
-        // Fetch the category first 
-        // console.log("categoryName in  getSubcategoryByName",categoryName) 
-        // console.log("subcategoryName in  getSubcategoryByName",subcategoryName) 
-        const category = await CategoriesModel.findOne({ name: categoryName })
-        if (!category) {
-          throw new Error(`Category "${categoryName}" not found`);
-        }
-      
-        const findSubcategory = (subcategories, name) => {
-          if (!Array.isArray(subcategories)) {   
-            return null;
-          }
-// console.log("subcategories",subcategories)
-          for (const sub of subcategories) {   
-            if (sub.name === subcategoryName) {
-// console.log("subcategoryName in findSubcategory",subcategoryName)
-              return sub._id;
-            }
-            if (sub.subcategories && sub.subcategories.length > 0) {
-              const result = findSubcategory(sub.subcategories, name);
-              if (result) {
-                return result;
-              }
-            }
-          }
-          return null;
-        };
-    
-        // Start searching for the subcategory from the category's subcategories array
-        const subcategoryId = findSubcategory(category.subCategories, subcategoryName);
-        return subcategoryId;
-      } catch (error) {
-        console.error('Error fetching subcategory by name:', error);
-        throw error;
+
+      // חיפוש ישיר במסד לפי שם תת־קטגוריה
+      const category = await CategoriesModel.findOne({
+        "subCategories.name": subcategoryName,
+      }).lean();
+
+      if (!category) {
+        return res.status(404).json({ error: "Category not found" });
       }
-    },
-    
- 
-    updateCategory: async (req, res) => {
-      try {
-          const categoryId = req.params.id;
-          const { name, subCategories } = req.body;
-
-          if (!name || typeof name !== 'string') {
-              throw new Error('Invalid category name: must be a string');
-          }
-  
-          const category = await CategoriesModel.findById(categoryId);
-          if (!category) {
-              throw new Error(`Category with ID ${categoryId} not found`);
-          }
-  
-          // Update category name
-          category.name = name;
-        
-          // Transform subCategories to only contain names
-          const subCategoryObjects = subCategories.map((subCat,i) => {
-
-              if (typeof subCat === 'object' && subCat.id) {
-              
-
-                  return { name: subCat.name || '', _id: subCat.id };
-              } else if (typeof subCat === 'object' && !subCat.id) {
-           
-                  const newId = new mongoose.Types.ObjectId();
-                  return { name: subCat.name, _id: newId.toString() };
-              }
-              return null;
-          }).filter(Boolean); // filter out any null values from the array
-  
-          // Save transformed subCategories to the category
-          category.subCategories = subCategoryObjects;
-  
-          await category.save();
-  
-          // Create new subcategory folders if they do not exist
-          const newCategoryPath = path.join(__dirname, '..', 'files', categoryId.toString());
-          if (subCategoryObjects && subCategoryObjects.length > 0) {
-              const oldSubCategoryNames = fs.readdirSync(newCategoryPath);
-              for (const newSubCat of subCategoryObjects) {
-                  const newSubCategoryPath = path.join(newCategoryPath, newSubCat._id.toString());
-                  if (!oldSubCategoryNames.includes(newSubCat._id.toString())) {
-                      fs.mkdirSync(newSubCategoryPath, { recursive: true });
-                  }
-              }
-          }
-  
-          res.status(200).json({ message: `Category with ID ${categoryId} updated successfully` });
-      } catch (error) {
-          console.error('Error updating category:', error);
-          res.status(400).json({ message: error.message });
-      }
+      return res.status(200).json(category);
+    } catch (e) {
+      console.error("getCategoryBySubcategory error:", e);
+      return res.status(500).json({ error: e.message });
+    }
   },
 
-  
+  // POST /categories/add
   add: async (req, res) => {
     try {
-       console.log("i am in add category")
-      const { name, subCategories } = req.body;
-    
-      // Validate input data (optional but recommended)
-      if (!name || typeof name !== 'string') {
-        throw new Error('Invalid category name: must be a string');
-      }
-  
-      // Check for existing category (optional, depending on requirements)
-      const existingCategory = await CategoriesModel.findOne({ name });
-      if (existingCategory) {
-        throw new Error(`Category "${name}" already exists`);
-      }
-  
-      // Save subcategories if provided
-      const savedSubCategories = [];
-      if (Array.isArray(subCategories)) {
-        for (const subCategoryData of subCategories) {
+      const name = String(req.body?.name || "").trim();
+      if (!name) throw new Error("Invalid category name");
 
-            // Create a new subcategory object
-            const subCategory = new SubCategoryModel({ name: subCategoryData.name });
-            // Save the subcategory
-            const savedSubCategory = await subCategory.save();
-            // Push the saved subcategory id to the array
-            savedSubCategories.push(savedSubCategory );
-          
-        }
-      }
-  
-      // Create a new category object with subcategory IDs
-      const newCategory = new CategoriesModel({ name, subCategories: savedSubCategories });
-  
-      // Save the new category to the database
-      await newCategory.save();
+      // בדיקת כפילות אופציונלית
+      const exists = await CategoriesModel.findOne({ name }).lean();
+      if (exists) throw new Error(`Category "${name}" already exists`);
 
-        // Create category folder
-        const categoryPath = path.join(__dirname, '..', 'files', newCategory._id.toString());
-        console.log("categoryPath",categoryPath)
-        if (!fs.existsSync(categoryPath)) {
-          console.log("!fs.existsSync(categoryPath)no  eexisst ccategry folder")
-            fs.mkdirSync(categoryPath, { recursive: true });
-        }
+      const subCategories = normalizeSubCategories(req.body?.subCategories);
+      const created = await CategoriesModel.create({ name, subCategories });
 
-        // Create folders for subcategories
-        if (savedSubCategories && savedSubCategories.length > 0) {
-            for (const subCat of savedSubCategories) {
-                const subCategoryPath = path.join(categoryPath, subCat._id.toString());
-                if (!fs.existsSync(subCategoryPath)) {
-                    fs.mkdirSync(subCategoryPath, { recursive: true });
-                }
-            }
-        }
-
-        res.status(201).json({ message: `Category "${name}" added successfully` });
-    } catch (error) {
-        console.error('Error adding category:', error);
-        res.status(400).json({ message: error.message });
+      return res
+        .status(201)
+        .json({ ok: true, category: created.toObject ? created.toObject() : created });
+    } catch (e) {
+      console.error("add category error:", e);
+      return res.status(400).json({ message: e.message });
     }
-},
-getCategoryBySubcategory: async (req, res) => {
-  try {
-    // console.log("req.params.subcategoryName", req.params); // Log req.params for debugging
-    const subcategoryName = req.params.subcategoryName; // Access subcategoryName correctly
-    
-    if (!subcategoryName) {
-      return res.status(400).json({ error: "subcategoryName is required" });
+  },
+
+  // PUT /categories/update/:id
+  updateCategory: async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: "Invalid id" });
+      }
+
+      const name = String(req.body?.name || "").trim();
+      if (!name) throw new Error("Invalid category name");
+
+      // ממפים מערך תתי־קטגוריות למסמכים עם _id + name
+      const subCategories = normalizeSubCategories(req.body?.subCategories);
+
+      const updated = await CategoriesModel.findByIdAndUpdate(
+        id,
+        { name, subCategories },
+        { new: true, runValidators: true }
+      ).lean();
+
+      if (!updated) return res.status(404).json({ message: "Category not found" });
+      return res.status(200).json({ ok: true, category: updated });
+    } catch (e) {
+      console.error("updateCategory error:", e);
+      return res.status(400).json({ message: e.message });
     }
+  },
 
-    const categories = await CategoriesController.fetchCategories(); // Await the promise
-// console.log("categories",categories)
-    // Use find method to search the category
-    const category = categories?.find(category =>
-      category.subCategories.find(
-        subcategory => subcategory?.name === subcategoryName)
-    );
-
-    if (!category) {
-      return res.status(404).json({ error: "Category not found" });
-    }
-    
-    return res.json(category); // Send the response with the found category
-  } catch (e) {
-    console.error(`Error finding category: ${e.message}`);
-  
-    return res.status(500).json({ error: `Error finding category: ${e.message}` });
-  }
-},
-
-
+  // PUT /categories/delete/:id   (שומרים תאימות לצד הלקוח שלך)
   deleteCategory: async (req, res) => {
     try {
- 
-      const categoryId = req.params.id;
-
-      // Remove category from the database
-      const category = await CategoriesModel.findByIdAndDelete(categoryId);
-      if (!category) {
-        throw new Error(`Category with ID ${categoryId} not found`);
+      const { id } = req.params;
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: "Invalid id" });
       }
 
-      // Remove associated folder
-      const categoryPath = path.join(__dirname, '..', 'files', categoryId.toString());
-      if (fs.existsSync(categoryPath)) {
-        fs.rmSync(categoryPath, { recursive: true, force: true });
-      }
+      const deleted = await CategoriesModel.findByIdAndDelete(id).lean();
+      if (!deleted) return res.status(404).json({ message: "Category not found" });
 
-      res.status(200).json({ message: `Category with ID ${categoryId} deleted successfully` });
-    } catch (error) {
-      console.error('Error deleting category:', error);
-      res.status(400).json({ message: error.message });
+      // אין שום טיפול בתיקיות/קבצים – MongoDB בלבד
+      return res.status(200).json({ ok: true });
+    } catch (e) {
+      console.error("deleteCategory error:", e);
+      return res.status(400).json({ message: e.message });
     }
-  }
-}
-
-
-
+  },
+};
 
 export default CategoriesController;
