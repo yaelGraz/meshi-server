@@ -569,7 +569,7 @@ async function upload(req, res) {
     const supabase = getSupabase(req);
     const category = String(req.query.category || "").trim();
     const subcategory = String(req.query.subcategory || "").trim();
-
+console.log("category ad subcategory in upload filecontroller",category,subcategory )
     const file = req.file || (req.files && req.files[0]);
     if (!file) return res.status(400).json({ error: "file is required" });
 
@@ -577,7 +577,7 @@ async function upload(req, res) {
     const ext = (file.originalname?.split(".").pop() || "").toLowerCase();
     const guidName = `${Date.now()}_${crypto.randomBytes(6).toString("hex")}.${ext || "bin"}`;
     const path = buildPath({ category, subcategory, guidName });
-
+console.log("path after buildpath  in upload filecontroller",path )
     const { data, error } = await supabase.storage
       .from(BUCKET)
       .upload(path, file.buffer, { contentType: file.mimetype, upsert: false });
