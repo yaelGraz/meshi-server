@@ -4,6 +4,7 @@ import CategoriesModel from "../Models/CategoriesModel.js";
 /**
  * עוזר: מנרמל מערך תתי־קטגוריות שהגיע מהלקוח (מחרוזות/אובייקטים) למבנה
  * [{ _id, name }] – שומר _id קיים אם נשלח, יוצר חדש אם לא.
+ * try
  */
 function normalizeSubCategories(input) {
   if (!Array.isArray(input)) return [];
