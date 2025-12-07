@@ -1,34 +1,37 @@
 import UserModel from "../Models/UserModel.js";
 
 const UserController={
-    login: async(req,res)=>{                                    
-       console.log("usercontroller")
-       console.log("req",req.body)
-       const { userName, password } = req.body;
+   login: async (req, res) => {
+    try {
+      const { userName, password } = req.body;
 
-       // Find user in the mock database
-       try {
-        const user = await UserModel.findOne({
-          userName: userName,
-          password: password
-        });
-        // console.log("user:",user)
-     
-        if (user) {
-          console.log("200")
-          res.status(200).json({
-            message: 'Login successful',
-            user: {name:user.name,isAdmin:user.isAdmin}
-          });
-        } else {
-          console.log("401")
-          res.status(401).json({ message: 'Authentication failed' });
-        }
-      } catch (error) {
-        console.error('Error during login:', error.message);
-        res.status(500).json({ message: 'An unexpected error occurred' });
+      const user = await UserModel.findOne({ userName, password });
+      if (!user) {
+        return res.status(401).json({ message: 'Authentication failed' });
       }
-    },
+
+      // יצירת JWT
+      const token = jwt.sign(
+        {
+          id: user._id,
+          userName: user.userName,
+          isAdmin: user.isAdmin
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN }
+      );
+
+      res.status(200).json({
+        message: 'Login successful',
+        token, // שולחים את הטוקן לצד הלקוח
+        user: { name: user.name, isAdmin: user.isAdmin }
+      });
+
+    } catch (error) {
+      console.error('Error during login:', error.message);
+      res.status(500).json({ message: 'An unexpected error occurred' });
+    }
+  },
     add:async(req,res)=>{
        try{
         // console.log("name,userName,password:",req.body)
