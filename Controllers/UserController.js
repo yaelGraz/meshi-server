@@ -1,5 +1,5 @@
 import UserModel from "../Models/UserModel.js";
-
+import jwt from 'jsonwebtoken'
 const UserController={
    login: async (req, res) => {
     try {
