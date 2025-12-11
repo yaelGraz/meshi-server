@@ -53,7 +53,6 @@ app.use("/files/:category/:subcategory", (req, res, next) => {
 // Middleware to handle file uploads
 //app.use("/files", upload.single('file'));
 
-app.use("/", UserRouter);
 app.use("/users",UserRouter);
 app.use("/categories", CategoriesRouter);
 app.use("/files", FileRouter); 
