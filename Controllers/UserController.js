@@ -92,7 +92,7 @@ const UserController={
    delete:async (req,res)=>{
     try {
       const userId = req.params.id;
-  
+  console.log("userId = req.params.id",userId = req.params.id)
       // Find the category by its ID
       const user = await UserModel.findById(userId);
   
